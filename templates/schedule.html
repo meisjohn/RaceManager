@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>Race Schedule</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Heat</th>
+                <th>Lane 1</th>
+                <th>Lane 2</th>
+                <th>Lane 3</th>
+                <th>Lane 4</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for race in races %}
+            <tr>
+                <td>{{ race.heat_number }}</td>
+                {% for lane in range(1, 5) %}
+                <td>{% if race.lanes.get(lane) %}{{ race.lanes[lane].name }} ({{race.lanes[lane].car_name}}){% endif %}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <a href="/results">Enter Results</a>
+{% endblock %}

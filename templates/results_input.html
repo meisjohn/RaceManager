@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>Enter Race Results</h1>
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+    <form method="POST">
+        <table>
+            <thead>
+                <tr>
+                    <th>Heat</th>
+                    <th>Lane 1</th>
+                    <th>Lane 2</th>
+                    <th>Lane 3</th>
+                    <th>Lane 4</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for race in races %}
+                <tr>
+                    <td>{{ race.heat_number }}</td>
+                    {% for lane in range(1, 5) %}
+                    <td>
+                        {% if race.lanes.get(lane) %}
+                        <input type="number" step="0.01" name="time_race_{{ race.heat_number }}_lane_{{ lane }}" required>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <input type="submit" value="Submit Results">
+    </form>
+{% endblock %}

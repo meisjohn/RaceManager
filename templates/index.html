@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>Add Participant</h1>
+
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+
+    <form method="POST">
+        Name: <input type="text" name="name" required><br>
+        Subgroup: <select name="subgroup" required>
+          {% for id, name in subgroup_names.items() %}
+            <option value="{{ id }}">{{ name }}</option>
+          {% endfor %}
+        </select><br>
+        <input type="submit" value="Add">
+    </form>
+
+    <h2>Participants</h2>
+    <ul>
+        {% for p in participants %}
+        <li>{{ p.name }} ({{ subgroup_names.get(p.subgroup) }}, Car {{ p.car_number }}: {{p.car_name}})</li>
+        {% endfor %}
+    </ul>
+
+    <a href="/schedule">Generate Schedule</a>
+{% endblock %}
