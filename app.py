@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for
 import itertools
 import json
+from enum import Enum
+
 
 app = Flask(__name__)
 
@@ -18,6 +20,14 @@ except FileNotFoundError:
         "Exhibition": "Exhibition"
     }
 
+NUM_LANES = 4
+
+class Rounds(Enum):
+    NONE = 0
+    FIRST = 1
+    SEMI = 2
+    FINAL = 3
+
 class Participant:
     def __init__(self, name, subgroup):
         self.name = name
@@ -32,6 +42,7 @@ class Race:
         self.heat_number = heat_number
         self.lanes = {}
         self.times = {}
+        self.round = Round.NONE
 
 participants = []
 races = []
@@ -44,89 +55,143 @@ def index():
             subgroup = int(request.form["subgroup"])
             if 1 <= subgroup <= len(subgroup_names):
                 add_participant(name, subgroup)
-                assign_car_numbers()
                 return redirect(url_for("index"))
             else:
-                return render_template("index.html", participants=participants, error=f"Subgroup must be between 1 and {len(subgroup_names)}.")
+                return render_template("index.html", 
+                                       participants=participants, 
+                                       error=f"Subgroup must be between 1 and {len(subgroup_names)}.")
         except ValueError:
-            return render_template("index.html", participants=participants, error="Invalid subgroup input.")
-    return render_template("index.html", participants=participants, subgroup_names=subgroup_names)
+            return render_template("index.html", 
+                                   participants=participants, 
+                                   error="Invalid subgroup input.")
+    return render_template("index.html", 
+                           participants=participants, 
+                           subgroup_names=subgroup_names)
 
 def add_participant(name, subgroup):
     participants.append(Participant(name, subgroup))
+    num_participants = len([p for p in participants if p.subgroup == subgroup])
+    participants[-1].car_number = num_participants
+    participants[-1].car_name = f"{subgroup[0]}{num_participants}"
 
-def assign_car_numbers():
-    for subgroup in subgroup_names:
-        car_number = 1
-        for p in participants:
-            if p.subgroup == subgroup:
-                p.car_number = car_number
-                p.car_name = f"{subgroup_names[subgroup][0]}{car_number}"
-                car_number += 1
+@app.route("/schedule_initial")
+def schedule_initial():
+    schedule_initial_races()
+    return redirect(url_for("schedule")) # Redirect to the main schedule page
 
-@app.route("/schedule")
-def schedule():
-    schedule_races()
-    return render_template("schedule.html", races=races, subgroup_names=subgroup_names)
-
-def schedule_races():
-    races.clear()
+def schedule_initial_races():
+    races.clear() # Clear any existing races
     heat_number = 1
 
     for subgroup in subgroup_names:
         subgroup_participants = [p for p in participants if p.subgroup == subgroup]
         num_participants = len(subgroup_participants)
+        full_groups = num_participants // NUM_LANES
+        remainder = num_participants & NUM_LANES
 
-        if num_participants >= 3:
-            for round_num in [1, 2] if subgroup != "Exhibition" else [1]:
-                if round_num == 2:
-                    subgroup_participants = sorted(subgroup_participants, key=lambda p: (p.average_time, p.best_time))[:4]
-                    num_participants = len(subgroup_participants)
+        if num_participants =< NUM_LANES:
+            race_groups = subgroup_participants
+        else:
 
-                # Create combinations and assign lanes:
-                for i in range(num_participants):
-                    p1 = subgroup_participants[i]
-                    for j in range(i + 1, num_participants):
-                        p2 = subgroup_participants[j]
-                        for k in range(j + 1, num_participants):
-                            p3 = subgroup_participants[k]
-                            for l in range(k + 1, num_participants + 1):
-                                p4 = None if l > num_participants else subgroup_participants[l-1]
+            # Assign all races but last two
+            race_groups = [subgroup_participants[i:i+NUM_LANES]
+                           for i in range(0, (full_groups-1)*NUM_LANES, NUM_LANES)]
+            resume_idx = ((full_groups-1) * NUM_LANES) + 1
 
-                                # Check if participants have raced twice already
-                                if p1.times and len(p1.times) >= 2: continue
-                                if p2.times and len(p2.times) >= 2: continue
-                                if p3.times and len(p3.times) >= 2: continue
-                                if p4 and p4.times and len(p4.times) >= 2: continue
+            if remainder != 0 && remainder < NUM_LANES/2:
+                # Rebalance
+                last_row = int((NUM_LANES + remainder) / 2)
+                penultimate_row = (NUM_LANES + remainder) - last_row
+                race_groups += subgroup_participants[resume_idx:resume_index+penultimate_row]
+                race_groups += subgroup_participants[resume_index+penultimate_row:-1]
 
-                                # Ensure outer/inner lane balance (simplified):
-                                # Create two heats, swapping lanes
-                                for heat_num in [1, 2]:
-                                    race = Race(heat_number)
-                                    if heat_num == 1:
-                                        race.lanes[1] = p1
-                                        race.lanes[2] = p2
-                                        race.lanes[3] = p3
-                                        if p4: race.lanes[4] = p4
-                                    else:
-                                        race.lanes[1] = p2
-                                        race.lanes[2] = p1
-                                        race.lanes[3] = p4 if p4 else p3
-                                        race.lanes[4] = p3 if p4 else None
+            else:
+                # Take it as-is
+                race_groups += [subgroup_participants[i:i+chunk]
+                                for i in range(resume_idx, num_participants, NUM_LANES)]
+            
 
-                                    races.append(race)
-                                    heat_number += 1
-                                break
-                        break
-                    break
 
-    # Final Round
+
+        # Create combinations and assign lanes:
+        for grp in race_groups:
+                pairs = [grp[i:i+1] for i in range(0,len(grp),2)]
+
+                # Create two heats, swapping lanes
+                for heat_num in [1, 2]:
+                    race = Race(heat_number)
+                    race.round = Rounds.FIRST
+                    if heat_num == 1:
+                        for lane in range(0,NUM_LANES,2):
+                            if (lane/2) < len(pairs):
+                                race.lanes[lane] = pairs[lane/2][0]
+                                race.lanes[lane+1] = pairs[lane/2][1] if len (pairs[lane/2]) == 2 else None
+                            else:
+                                race.lanes[lane] = None
+                                race.lanes[lane+1] = None
+
+
+                    else:
+                        for lane in range(0,NUM_LANES,2):
+                            if (lane/2) < len(pairs):
+                                race.lanes[lane+1] = pairs[lane/2][0]
+                                race.lanes[lane] = pairs[lane/2][1] if len (pairs[lane/2]) == 2 else None
+                            else:
+                                race.lanes[lane] = None
+                                race.lanes[lane+1] = None
+
+
+                    races.append(race)
+
+        initial_races_completed[subgroup] = False # Initialize to False at the start
+
+@app.route("/complete_initial/<int:subgroup>") # New route to mark initial races as completed
+def complete_initial(subgroup):
+    initial_races_completed[subgroup] = True
+    return redirect(url_for("schedule"))
+
+@app.route("/schedule_semifinal") # New route for scheduling semi-final races
+def schedule_semifinal():
+    schedule_semi_final_races()
+    return redirect(url_for("schedule"))
+
+def schedule_semi_final_races():
+    # ... (Logic to clear existing semi-final races, if any)
+    heat_number = len(races) + 1  # Start heat numbers after initial races
+
+    for subgroup in subgroup_names:
+        if subgroup != "Exhibition" and initial_races_completed.get(subgroup, False): # Only schedule if initial races are completed
+            subgroup_participants = [p for p in participants if p.subgroup == subgroup]
+            subgroup_participants = sorted(subgroup_participants, 
+                                           key=lambda p: (p.average_time, p.best_time))[:4] # Top 4
+            num_participants = len(subgroup_participants)
+
+            if num_participants >= 3:
+
+
+            semi_final_races_completed[subgroup] = False # Initialize to False at the start
+
+@app.route("/complete_semifinal/<int:subgroup>") # New route to mark semi-final races as completed
+def complete_semifinal(subgroup):
+    semi_final_races_completed[subgroup] = True
+    return redirect(url_for("schedule"))
+
+@app.route("/schedule_final")  # New route for scheduling final races
+def schedule_final():
+    schedule_final_races()
+    return redirect(url_for("schedule"))
+
+def schedule_final_races():
+   # ... (Logic to clear existing final races, if any)
+    heat_number = len(races) + 1  # Start heat numbers after other races
+
     fastest_racers = []
     for subgroup in subgroup_names:
-        subgroup_participants = [p for p in participants if p.subgroup == subgroup and subgroup != "Exhibition"]
-        if subgroup_participants:
-             fastest = sorted(subgroup_participants, key=lambda p: (p.average_time, p.best_time))[0]
-             fastest_racers.append(fastest)
+        if subgroup != "Exhibition" and semi_final_races_completed.get(subgroup, False): # Only schedule if semi-final races are completed
+            subgroup_participants = [p for p in participants if p.subgroup == subgroup]
+            if subgroup_participants:
+                 fastest = sorted(subgroup_participants, key=lambda p: (p.average_time, p.best_time))[0]
+                 fastest_racers.append(fastest)
 
     if len(fastest_racers) > 1:
         final_race = Race(heat_number)
@@ -134,6 +199,12 @@ def schedule_races():
             final_race.lanes[i+1] = racer
         races.append(final_race)
 
+
+@app.route("/schedule") # Main schedule page
+def schedule():
+    return render_template("schedule.html", races=races, subgroup_names=subgroup_names,
+                           initial_races_completed=initial_races_completed,
+                           semi_final_races_completed=semi_final_races_completed)
 
 @app.route("/results", methods=["GET", "POST"])
 def results():
