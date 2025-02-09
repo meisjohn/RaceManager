@@ -39,6 +39,7 @@ class Participant:
         self.car_weight_oz = 0
         self.times = []
         self.average_time = 0
+        self.best_time = 0
         self.car_name = None
     def __str__(self):
         return f"P({self.car_name}): {self.patrol},{self.first_name} {self.last_name}, {self.car_weight_oz}"
@@ -46,12 +47,22 @@ class Participant:
 class Race:
     def __init__(self):
         self.race_number = assign_race_number()
-        self.lanes = {}
-        self.times = {}
+        self.heats = []
         self.round = Rounds.NONE
     def __str__(self):
         my_str=f"R({self.race_number}): Round: {self.round}" + os.linesep
-        my_str+=os.linesep.join([f"Lane {l}:{p}" for l,p in sorted(self.lanes.items())])
+        my_str+=os.linesep.join([f"Heat: {h}" for h in self.heats])
+        return my_str
+
+class Heat:
+    def __init__(self, heat_number):
+        self.heat_id = assign_heat_index()
+        self.heat_number = heat_number
+        self.lanes = {}
+        self.times = {}
+    def __str__(self):
+        my_str=f"H({self.heat_id} {self.heat_number}):" + os.linesep
+        my_str+=os.linesep.join([f"Lane {l}: {p}" for l,p in sorted(self.lanes.items())])
         return my_str
 
 # Race Data
@@ -60,11 +71,17 @@ races = []
 initial_races_completed = {}
 semi_final_races_completed = {}
 race_index = 0
+heat_index = 0
 
 def assign_race_number():
     global race_index
     race_index += 1
     return race_index
+
+def assign_heat_index():
+    global heat_index
+    heat_index += 1
+    return heat_index
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -105,8 +122,15 @@ def schedule_initial():
     schedule_initial_races()
     return redirect(url_for("schedule")) # Redirect to the main schedule page
 
+def clear_races(round: Rounds = Rounds.NONE):
+    if round == Rounds.NONE:
+        races.clear()
+    else:
+        for r in races:
+            if r.round == round:
+                del r
+
 def schedule_initial_races():
-    races.clear() # Clear any existing races
 
     for patrol in patrol_names:
         patrol_racers = [p for p in participants if p.patrol == patrol]
@@ -151,24 +175,27 @@ def assign_paired_lanes(groups, round: Rounds):
     swapped_lanes = list(reversed(lanes_half_a)) + list(reversed(lanes_half_b))
     # Create combinations and assign lanes:
     for grp in groups:
+        race = Race()
+        race.round = round
         # Create two heats, swapping lanes on the second heat
         for heat_num in [1, 2]:
-            race = Race()
-            race.round = round
+            heat = Heat(heat_num)
             # Then assign lanes normally for each half for the first heat
             # Then reassign them in half-reverse for the second heat
             # i.e. 0,1,2,3 then 1,0,3,2 for 4 lanes
             if heat_num == 1:
                 for lane in range(NUM_LANES):
-                    race.lanes[lane] = grp[lane]
+                    heat.lanes[lane] = grp[lane]
             else:
                 for lane in range(NUM_LANES):
-                    race.lanes[swapped_lanes[lane]]=grp[lane]
-            races.append(race)
+                    heat.lanes[swapped_lanes[lane]]=grp[lane]
+            race.heats.append(heat)
+        races.append(race)
 
-def assign_all_lanes(race_group):
+def assign_all_lanes(race_group, round: Rounds):
     global races
-    round = Rounds.FINAL
+    race = Race()
+    race.round = round
     if len(race_group) < NUM_LANES:
         for i in range(len(race_group), NUM_LANES):
             race_group.append(None)
@@ -178,11 +205,11 @@ def assign_all_lanes(race_group):
     # If more cars run than lanes, then a different
     # car will sit out each race.
     for heat in range(num_cars):
-        race = Race()
-        race.round = round
+        heat = Heat(heat)
         for lane in range (NUM_LANES):
-            race.lanes[lane] = race_group[(heat + lane) % num_cars]
-        races.append(race)
+            heat.lanes[lane] = race_group[(heat + lane) % num_cars]
+        race.heats.append(heat)
+    races.append(race)
 
 @app.route("/complete_initial/<int:patrol>") # New route to mark initial races as completed
 def complete_initial(patrol):
@@ -195,15 +222,13 @@ def schedule_semifinal():
     return redirect(url_for("schedule"))
 
 def schedule_semi_final_races():
-    # ... (Logic to clear existing semi-final races, if any)
-    race_number = len(races) + 1  # Start heat numbers after initial races
 
     for patrol in patrol_names:
         if patrol != "Exhibition" and initial_races_completed.get(patrol, False): # Only schedule if initial races are completed
+            # Get top racers
             patrol_participants = [p for p in participants if p.patrol == patrol]
             patrol_participants = sorted(patrol_participants, 
-                                           key=lambda p: (p.average_time, p.best_time))[:4] # Top 4
-            num_participants = len(patrol_participants)
+                                         key=lambda p: (p.average_time, p.best_time))[:NUM_LANES]
 
             if num_participants >= 3:
                 pass #TODO
@@ -250,18 +275,22 @@ def schedule():
 def results():
     if request.method == "POST":
         for race in races:
-            for lane in range(1, 5):  # Up to 4 lanes
-                participant = race.lanes.get(lane)
-                if participant:
-                    try:
-                        time_key = f"time_race_{race.race_number}_lane_{lane}"
-                        time = float(request.form.get(time_key, 0))
-                        race.times[lane] = time
-                        participant.times.append(time)
-                        participant.best_time = min(participant.times) if participant.times else 0 # Track best time
-                    except ValueError:
-                        return render_template("results_input.html", races=races, patrol_names=patrol_names, error=f"Invalid time input for Heat {race.race_number}, Lane {lane}.")
-        calculate_averages()
+            for heat in race.heats:
+                for lane in range(NUM_LANES):
+                    participant = race.lanes.get(lane)
+                    if participant:
+                        try:
+                            time_key = f"time_race_{race.race_number}_heat_{heat.heat_number}_lane_{lane}"
+                            time = float(request.form.get(time_key, 0))
+                            race.times[lane] = time
+                            participant.times.append(time)
+                            participant.best_time = min(participant.times) if participant.times else 0 # Track best time
+                        except ValueError:
+                            return render_template("results_input.html",
+                                                   races=races,
+                                                   patrol_names=patrol_names,
+                                                   error=f"Invalid time input for Heat {race.race_number}, Lane {lane}.")
+            calculate_averages()
         return redirect(url_for("display_results"))
     return render_template("results_input.html", races=races, patrol_names=patrol_names)
 
