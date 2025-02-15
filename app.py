@@ -204,10 +204,10 @@ def assign_all_lanes(race_group, round: Rounds):
     # Goal is to have every car run in every lane    
     # If more cars run than lanes, then a different
     # car will sit out each race.
-    for heat in range(num_cars):
-        heat = Heat(heat)
+    for heat_idx in range(num_cars):
+        heat = Heat(heat_idx)
         for lane in range (NUM_LANES):
-            heat.lanes[lane] = race_group[(heat + lane) % num_cars]
+            heat.lanes[lane] = race_group[(heat_idx + lane) % num_cars]
         race.heats.append(heat)
     races.append(race)
 
