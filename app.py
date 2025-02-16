@@ -144,28 +144,21 @@ def schedule_initial_races():
 def group_racers(racers):
     groups = []
     num_racers = len(racers)
-    full_groups = num_racers // NUM_LANES
-    remainder = num_racers % NUM_LANES
     if num_racers <= NUM_LANES:
-        groups = [racers]
+        groups = [racers + [None] * (NUM_LANES - num_racers)]
     else:
-        # Assign all groups but last two
-        groups = [racers[i:i+NUM_LANES]
-                  for i in range(0, (full_groups-1)*NUM_LANES, NUM_LANES)]
-        resume_idx = ((full_groups-1) * NUM_LANES)
-        # For the last 2 groups, ensure that there's a balance as best
-        # possible.  Ensuring every group has #NUM_LANES particpants,
-        # padded with 'None'
-        count_last_row = int((NUM_LANES + remainder) / 2)
-        count_penultimate_row = (NUM_LANES + remainder) - count_last_row
-        penultimate_group = racers[resume_idx:resume_idx+count_penultimate_row]
-        for i in range(count_penultimate_row,NUM_LANES):
-            penultimate_group.append(None)
-        last_group = racers[resume_idx+count_penultimate_row:]
-        for i in range(count_last_row,NUM_LANES):
-            last_group.append(None)
-        groups.append(penultimate_group)
-        groups.append(last_group)
+        # Get our total number of races
+        num_races = (num_racers + NUM_LANES - 1) // NUM_LANES
+        # Minimum number of cars per race
+        base_racers_per_race = num_racers // num_races
+        remainder = num_racers % num_races
+        distribution = [base_racers_per_race + 1] * remainder + \
+                [base_racers_per_race] * (num_races - remainder)
+        racer_idx = 0
+        for d in distribution:
+            race = racers[racer_idx:racer_idx+d] + [None] * (NUM_LANES-d)
+            racer_idx += d
+            groups.append(race)
     return groups
 
 def assign_paired_lanes(groups, round: Rounds):
