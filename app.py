@@ -1,5 +1,5 @@
 from ast import Num
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 import itertools
 import json
 import os
@@ -13,7 +13,11 @@ app = Flask(__name__)
 # Load patrol names from JSON config file
 try:
     with open("patrol_config.json", "r") as f:
-        patrol_names = json.load(f)
+        input_json = json.load(f)
+        patrol_names = input_json.copy()
+        for k,v in input_json.items():
+            if isinstance(k,str) and k.isdigit():
+                patrol_names[int(k)] = v
 except FileNotFoundError:
     patrol_names = {
         1: "Foxes", 
@@ -47,6 +51,8 @@ class Participant:
         self.car_number = None
     def __str__(self):
         return f"P({self.car_name}): {self.patrol},{self.first_name} {self.last_name}, {self.car_weight_oz}"
+    def toJSON(self):
+        return self.__dict__
 
 class Race:
     def __init__(self, patrol, race_number):
@@ -217,7 +223,7 @@ def participant_times(participant_id):
 
 def add_participant(first_name,last_name, patrol):
 
-    if patrol in patrol_names.keys():
+    if patrol in patrol_names.values():
         for k,v in patrol_names.items():
             if v == patrol:
                 patrol = k
@@ -233,6 +239,9 @@ def add_participant(first_name,last_name, patrol):
         next_car_number = 1  # Start at 1 if no existing numbers
 
     new_p.car_number = next_car_number
+    if not patrol in patrol_names:
+        if str(patrol) in patrol_names:
+            patrol = str(patrol)
     new_p.car_name = f"{patrol_names.get(patrol, 'Unknown')[:1]}{next_car_number}"
 
     participants.append(new_p)
@@ -531,7 +540,7 @@ def calculate_averages():
 def display_results():
     sorted_participants = sorted(participants, key=lambda x: (x.average_time, x.best_time))
     for p in sorted_participants:
-        p.average_speed = calculate_average_speed(p.times)
+        p.average_speed = calculate_race_averages(p.times)
         p.top_speed = calculate_top_speed(p.times)
         p.top_speed_race_number = get_top_speed_race_number(p)
     return render_template("results.html", 
@@ -583,6 +592,18 @@ def load_roster(filename):
         reader = csv.DictReader(csvfile)
         for row in reader:
             add_participant(row["First Name"], row["Last Name"], row["Patrol"])
+
+@app.route("/api/participants")
+def api_participants():
+    return jsonify([p.toJSON() for p in participants])
+
+@app.route("/api/patrol_names")
+def api_patrol_names():
+    return jsonify(patrol_names)
+
+
+
+
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', debug=True)
