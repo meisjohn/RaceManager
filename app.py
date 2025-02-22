@@ -85,13 +85,33 @@ def load_data():
             data = json.load(f)
             # Reconstruct participants, races, etc. from loaded data
             global participants, races, initial_races_completed, semi_final_races_completed, race_index, heat_index
-            participants = [Participant(**p_data) for p_data in data.get("participants", [])]
-            races = [Race(**r_data) for r_data in data.get("races", [])]
-            for race in races:
-                race.heats = [Heat(**h_data) for h_data in race.heats]
-                for heat in race.heats:
-                    heat.lanes = {int(k): Participant(**p_data) if isinstance(p_data, dict) else p_data for k, p_data in heat.lanes.items()}
-                    heat.times = {int(k): t for k, t in heat.times.items()}
+            participants = []
+            for p_data in data.get("participants", []):
+                p = Participant(p_data["first_name"], p_data["last_name"], p_data["patrol"])
+                p.__dict__.update(p_data)  # Update all other attributes
+                participants.append(p)
+
+            races = []
+            for r_data in data.get("races", []):
+                r = Race(r_data["patrol"], r_data["race_number"])
+                r.__dict__.update(r_data)
+                r.heats = []
+                for h_data in r_data.get("heats", []):
+                    h = Heat(h_data["heat_number"])
+                    h.__dict__.update(h_data)
+                    h.lanes = {}
+                    for lane_num_str, p_data in h_data.get("lanes", {}).items():
+                        lane_num = int(lane_num_str)
+                        if isinstance(p_data, dict): # Check if it's participant data
+                            p = Participant(p_data["first_name"], p_data["last_name"], p_data["patrol"])
+                            p.__dict__.update(p_data)
+                            h.lanes[lane_num] = p
+                        else:
+                            h.lanes[lane_num] = p_data # It might be None
+                    h.times = {int(k): t for k, t in h_data.get("times", {}).items()}
+                    r.heats.append(h)
+                races.append(r)
+
             initial_races_completed = data.get("initial_races_completed", {})
             semi_final_races_completed = data.get("semi_final_races_completed", {})
             race_index = data.get("race_index", 0)
@@ -565,4 +585,4 @@ def load_roster(filename):
             add_participant(row["First Name"], row["Last Name"], row["Patrol"])
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host='0.0.0.0', debug=True)
