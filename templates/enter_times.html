@@ -1,0 +1,32 @@
+
+{% extends "base.html" %}
+{% block content %}
+    <h1>Enter Race Times - Race {{ race.race_number }}, Heat {{ heat.heat_number }}</h1>
+
+    <form method="POST">
+        <table>
+            <thead>
+                <tr>
+                    {% for lane in range(1, NUM_LANES + 1) %}
+                        <th>Lane {{ lane }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    {% for lane in range(1, NUM_LANES + 1) %}
+                        <td>
+                            {% if heat.lanes.get(lane) %}
+                                <input type="number" step="0.01" name="time_race_{{ race.race_number }}_heat_{{ heat.heat_number }}_lane_{{ lane }}" value="{% if heat.times.get(lane) %}{{ heat.times[lane] }}{% endif %}">
+                            {% endif %}
+                        </td>
+                    {% endfor %}
+                </tr>
+            </tbody>
+        </table>
+        <input type="submit" value="Submit">
+    </form>
+
+    <a href="{{ url_for('schedule') }}">Back to Schedule</a>
+{% endblock %}
+

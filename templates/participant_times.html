@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>Race Times for {{ participant.first_name }} {{ participant.last_name }} ({{ patrol_names.get(participant.patrol) }})</h1>
+
+    {% if participant.times %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Race</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i, time in enumerate(participant.times) %}
+                    <tr>
+                        <td>{{ i + 1 }}</td>  <td>{{ time }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No race times recorded yet for this participant.</p>
+    {% endif %}
+
+    <a href="/download_racer_data/{{ participant.car_number }}">Download Data</a>
+    <a href="{{ url_for('index') }}">Back to Participant List</a>
+{% endblock %}

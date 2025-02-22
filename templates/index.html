@@ -1,27 +1,55 @@
 {% extends "base.html" %}
 {% block content %}
-    <h1>Add Participant</h1>
+    <h1>Race Partiipants</h1>
+
+    <h2>Add Participant</h2>
 
     {% if error %}
         <p class="error">{{ error }}</p>
     {% endif %}
 
     <form method="POST">
-        Name: <input type="text" name="name" required><br>
-        Subgroup: <select name="subgroup" required>
-          {% for id, name in subgroup_names.items() %}
-            <option value="{{ id }}">{{ name }}</option>
-          {% endfor %}
+        First Name: <input type="text" name="first_name" required><br>
+	Last Name: <input type="text" name="last_name" required><br>
+	Patrol: <select name="patrol" required>
+	    {% for id, name in patrol_names.items() %}
+                <option value="{{ id }}">{{ name }}</option>
+            {% endfor %}
         </select><br>
         <input type="submit" value="Add">
     </form>
 
-    <h2>Participants</h2>
-    <ul>
-        {% for p in participants %}
-        <li>{{ p.name }} ({{ subgroup_names.get(p.subgroup) }}, Car {{ p.car_number }}: {{p.car_name}})</li>
-        {% endfor %}
-    </ul>
+    <h2>Participants List</h2>
+    <table>  <thead>
+            <tr>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Patrol</th>
+                <th>Car Number</th>
+                <th>Car Name</th>
+		<th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in participants %}
+            <tr>
+                <td>{{ p.first_name }}</td>
+                <td>{{ p.last_name }}</td>
+                <td>{{ patrol_names.get(p.patrol) }}</td>
+                <td>{{ p.car_number }}</td>
+                <td>{{ p.car_name }}</td>
+                <td>
+                    <a href="/edit_participant/{{ p.car_number }}">Edit</a> |
+                    <form method="POST" action="/delete_participant/{{ p.car_number }}" style="display: inline;">
+                        <button type="submit" onclick="return confirm('Are you sure you want to delete this participant?')">Delete</button>
+                    </form>
+		    <a href="/participant_times/{{ p.car_number }}">Race Times</a>
+		</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 
-    <a href="/schedule">Generate Schedule</a>
+
+    <a href="/schedule_initial">Generate Initial Schedule</a>
 {% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>Edit Participant</h1>
+
+    <form method="POST">
+        First Name: {{ participant.first_name }}<br>
+        Last Name: {{ participant.last_name }}<br>
+        Patrol: {{ patrol_names.get(participant.patrol) }}<br>
+        Car Number: {{ participant.car_number }}<br>
+        Car Name: <input type="text" name="car_name" value="{{ participant.car_name }}" required><br>
+        Car Weight (oz): <input type="number" step="0.01" name="car_weight_oz" value="{{ participant.car_weight_oz }}" required><br>
+        <input type="submit" value="Update">
+    </form>
+    <a href="{{ url_for('index') }}">Back to Participant List</a>
+{% endblock %}
+

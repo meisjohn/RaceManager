@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 {% block content %}
     <h1>Race Results</h1>
@@ -5,22 +6,28 @@
         <thead>
             <tr>
                 <th>Name</th>
-                <th>Subgroup</th>
+                <th>Patrol</th>
                 <th>Car Number</th>
                 <th>Car Name</th>
                 <th>Average Time</th>
+                <th>Top Time</th>
+                <th>Top Time Race #</th>
             </tr>
         </thead>
         <tbody>
             {% for p in participants %}
             <tr>
-                <td>{{ p.name }}</td>
-                <td>{{ subgroup_names.get(p.subgroup) }}</td>
+                <td>{{ p.first_name }} {{ p.last_name }}</td>
+                <td>{{ patrol_names.get(p.patrol) }}</td>
                 <td>{{ p.car_number }}</td>
                 <td>{{ p.car_name }}</td>
-                <td>{{ p.average_time }}</td>
+                <td>{{ "{:.2f}".format(p.average_time) }}</td>
+                <td>{{ "{:.2f}".format(p.best_time) }}</td>
+                <td>{{ p.top_time_race_number }}</td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
+
+<a href="/download_results">Download Results</a>
 {% endblock %}

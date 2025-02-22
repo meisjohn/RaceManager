@@ -111,13 +111,18 @@
         }
 
     </style>
+    <script>  function confirmAction(message, url) {
+            if (confirm(message)) {
+                window.location.href = url;
+            }
+        }
+    </script>
 </head>
 <body>
     <nav>
         <ul>
             <li><a href="/">Add Participant</a></li>
             <li><a href="/schedule">Race Schedule</a></li>
-            <li><a href="/results">Enter Results</a></li>
             <li><a href="/display_results">Race Results</a></li>
         </ul>
     </nav>
