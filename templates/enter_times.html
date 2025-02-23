@@ -17,6 +17,16 @@
                     {% for lane in range(1, NUM_LANES + 1) %}
                         <td>
                             {% if heat.lanes.get(lane) %}
+			        <strong>{{heat.lanes.get(lane).car_name}}</strong><br>
+                                {{heat.lanes.get(lane).first_name}} {{heat.lanes.get(lane).last_name}}<br>
+                            {% endif %}
+                        </td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    {% for lane in range(1, NUM_LANES + 1) %}
+                        <td>
+                            {% if heat.lanes.get(lane) %}
                                 <input type="number" step="0.01" name="time_race_{{ race.race_number }}_heat_{{ heat.heat_number }}_lane_{{ lane }}" value="{% if heat.times.get(lane) %}{{ heat.times[lane] }}{% endif %}">
                             {% endif %}
                         </td>

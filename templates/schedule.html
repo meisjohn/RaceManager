@@ -3,95 +3,114 @@
 {% block content %}
     <h1>Race Schedule - Round {{ selected_round_name }}</h1>
 
-    <form method="GET">
-        Patrol: <select name="patrol">
-            <option value="">All</option>
-            {% for id, name in patrol_names.items() %}
-                <option value="{{ id }}" {% if selected_patrol == id %}selected{% endif %}>{{ name }}</option>
-            {% endfor %}
-        </select>
-        Round: <select name="round">
-            <option value="{{ Rounds.FIRST.value }}" {% if selected_round == Rounds.FIRST.value %}selected{% endif %}>First Round</option>
-            <option value="{{ Rounds.SEMI.value }}" {% if selected_round == Rounds.SEMI.value %}selected{% endif %}>Semi-Finals</option>
-            <option value="{{ Rounds.FINAL.value }}" {% if selected_round == Rounds.FINAL.value %}selected{% endif %}>Finals</option>
-        </select>
-        <button type="submit">Filter</button>
-    </form>
+    <form id="filterForm" method="GET"> 
+            Patrol: <select name="patrol" onchange="this.form.submit()">
+	        <option value="">All</option>
+	        {% for id, name in patrol_names.items() %}
+		    <option value="{{ id }}" {% if selected_patrol == id %}selected{% endif %}>{{ name }}</option>
+	        {% endfor %}
+            </select>
+	    Round: <select name="round" onchange="this.form.submit()">
+	        <option value="{{ Rounds.FIRST.value }}" {% if selected_round_value == Rounds.FIRST.value %}selected{% endif %}>First Round</option>
+                <option value="{{ Rounds.SEMI.value }}" {% if selected_round_value == Rounds.SEMI.value %}selected{% endif %}>Semi-Finals</option>
+                <option value="{{ Rounds.FINAL.value }}" {% if selected_round_value == Rounds.FINAL.value %}selected{% endif %}>Finals</option>
+            </select>
+	</form>
+	{% if  (selected_patrol|length == 0 and races|length > 0 ) or ( selected_patrol|length > 0 and races|selectattr("patrol", "eq", selected_patrol)|list|length > 0 ) %}
+	    <table>
+		<thead>
+		    <tr>
+			<th><center>Race #</center></th>
+			<th><center>Patrol</center></th>
+			<th><center>Heat</center></th>
+			{% for lane in range(1, NUM_LANES + 1) %}
+			    <th><center>Lane {{ lane }}</center></th>
+			{% endfor %}
+			<th>Actions</th>
+		    </tr>
+		</thead>
+		<tbody>
+		    {% for race in races %}
+			{% if (selected_patrol == "" or race.patrol == selected_patrol) and race.round == selected_round %}
+			    {% for heat in race.heats %}
+				<tr>
+				    <td><center>{{ race.race_number }}</center></td>
+				    <td><center>{{ patrol_names.get(race.patrol) }}</center></td>
+				    <td><center>{{ heat.heat_number }}</center></td>
+				    {% for lane in range(1, NUM_LANES + 1) %}
+					<td><center>
+					    {% if heat.lanes.get(lane) %}
+						<strong>{{heat.lanes.get(lane).car_name}}</strong><br>
+						{{heat.lanes.get(lane).first_name}} {{heat.lanes.get(lane).last_name}}<br>
+						{% if heat.times.get(lane) %}
+						    <em><big>{{heat.times.get(lane)}}</big></em><br>
+						{% endif %}
+					    {% endif %}
+					</center></td>
+				    {% endfor %}
+				    <td>
+					{% if race.round == Rounds.FIRST or race.round == Rounds.SEMI%}
+					    <a href="/enter_times/{{ race.race_number }}/{{ heat.heat_number }}">Enter Times</a> |
+					{% endif %}
+				    </td>
+				</tr>
+			    {% endfor %}
+			{% endif %}
+		    {% endfor %}
+		</tbody>
+	    </table>
+	    <br>
+	    <div align="Center">
+	    {% if selected_round == Rounds.FIRST %}
+		{% for id, name in patrol_names.items() %}
+		{% if initial_races_completed.get(id, False) and id != "Exhibition" and (id == selected_patrol or selected_patrol|length == 0) and races|selectattr("patrol", "eq", id)|list|length > 0   %}
+		<a href="javascript:confirmAction('Are you sure you want to schedule semi-finals for {{ name }}?', '/schedule_semifinal/{{ id }}')"><button class="big">Schedule Semi-Finals for {{ name }}</button></a><br>
+		    {% elif initial_races_completed.get(id, False) is not none and not initial_races_completed.get(id, False) and id != "Exhibition" and (id == selected_patrol or selected_patrol|length == 0) %}
+		    <a href="javascript:confirmAction('Are you sure you want to mark first round complete for {{ name }}?', '/complete_initial/{{ id }}')"><button class="big">Mark First Round Complete for {{ name }}</button></a><br>
+		    {% endif %}
+		{% endfor %}
+	    {% elif selected_round == Rounds.SEMI %}
+		{% for id, name in patrol_names.items() %}
+		    {% if all_semi_final_races_completed %}
+		    <a href="javascript:confirmAction('Are you sure you want to schedule the finals?', '/schedule_final/{{ id }}')"><button class="big">Schedule Finals</button></a><br>
+		    {% elif semi_final_races_completed.get(id, False) is not none and not semi_final_races_completed.get(id, False) and id != "Exhibition" and (id == selected_patrol or selected_patrol|length == 0)%}
+		    <a href="javascript:confirmAction('Are you sure you want to mark semi-finals complete for {{ name }}?', '/complete_semifinal/{{ id }}')"><button class="big">Mark Semi-Finals Complete for {{ name }}</button></a><br>
+		    {% endif %}
+		{% endfor %}
+	    {% endif %}
+	    </div>
+	    <br>
+	    {% if selected_round == Rounds.FIRST %}
+		<h2>Top Racers for Round 1</h2>
+		<table>
+		    <thead>
+			<tr>
+			    <th><center>Rank</center></th>
+			    <th>Name</th>
+			    <th>Patrol</th>
+			    <th><center>Average Time</center></th>
+			</tr>
+		    </thead>
+		    <tbody>
+			{% for i, racer in top_racers %}
+			    <tr>
+				<td><center>{{ i + 1 }}</center></td>
+				<td>{{ racer.first_name }} {{ racer.last_name }}</td>
+				<td>{{ patrol_names.get(racer.patrol) }}</td>
+				<td><center>{{ "{:.2f}".format(overall_racer_averages.get(racer)) }}</center></td>
+			    </tr>
+			{% endfor %}
+		    </tbody>
+		</table>
+	    {% endif %}
 
-    <table>
-        <thead>
-            <tr>
-                <th>Race #</th>
-                <th>Patrol</th>
-                <th>Heat</th>
-                {% for lane in range(1, NUM_LANES + 1) %}
-                    <th>Lane {{ lane }}</th>
-                {% endfor %}
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for race in races %}
-                {% if (selected_patrol == "" or race.patrol == selected_patrol) and race.round == selected_round %}
-                    {% for heat in race.heats %}
-                        <tr>
-                            <td>{{ race.race_number }}</td>
-                            <td>{{ patrol_names.get(race.patrol) }}</td>
-                            <td>{{ heat.heat_number }}</td>
-                            {% for lane in range(1, NUM_LANES + 1) %}
-                                <td>{{ heat.lanes.get(lane).first_name if heat.lanes.get(lane) else "" }}</td>
-                            {% endfor %}
-                            <td>
-                                {% if race.round == Rounds.FIRST or race.round == Rounds.SEMI%}
-                                    <a href="/enter_times/{{ race.race_number }}/{{ heat.heat_number }}">Enter Times</a> |
-                                {% endif %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                {% endif %}
-            {% endfor %}
-        </tbody>
-    </table>
-
-    {% if selected_round == Rounds.FIRST %}
-        <h2>Top Racers for Round 1</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Rank</th>
-                    <th>Name</th>
-                    <th>Patrol</th>
-                    <th>Average Time</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for i, racer in top_racers_round_1 %}
-                    <tr>
-                        <td>{{ i + 1 }}</td>
-                        <td>{{ racer.first_name }} {{ racer.last_name }}</td>
-                        <td>{{ patrol_names.get(racer.patrol) }}</td>
-                        <td>{{ "{:.2f}".format(overall_racer_averages.get(racer, float('inf'))) }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-	<a href="javascript:confirmAction('Are you sure you want to generate the initial schedule?', '/schedule_initial')">Generate Initial Schedule</a>
-
-        {% for id, name in patrol_names.items() %}
-            {% if initial_races_completed.get(id, False) and id != "Exhibition" %}
-		<a href="javascript:confirmAction('Are you sure you want to schedule semi-finals for {{ name }}?', '/schedule_semifinal/{{ id }}')">Schedule Semi-Finals for {{ name }}</a>
-            {% elif initial_races_completed.get(id, False) is not none and not initial_races_completed.get(id, False) and id != "Exhibition" %}
-		<a href="javascript:confirmAction('Are you sure you want to mark first round complete for {{ name }}?', '/complete_initial/{{ id }}')">Mark First Round Complete for {{ name }}</a>
-            {% endif %}
-        {% endfor %}
-    {% elif selected_round == Rounds.SEMI %}
-        {% for id, name in patrol_names.items() %}
-            {% if semi_final_races_completed.get(id, False) and id != "Exhibition" %}
-		<a href="javascript:confirmAction('Are you sure you want to schedule the finals for {{ name }}?', '/schedule_final/{{ id }}')">Schedule Finals for {{ name }}</a>
-            {% elif semi_final_races_completed.get(id, False) is not none and not semi_final_races_completed.get(id, False) and id != "Exhibition" %}
-		<a href="javascript:confirmAction('Are you sure you want to mark semi-finals complete for {{ name }}?', '/complete_semifinal/{{ id }}')">Mark Semi-Finals Complete for {{ name }}</a>
-            {% endif %}
-        {% endfor %}
+    {% else %}
+    	
+        <center><h2>No races scheduled
+	    {% if selected_patrol in patrol_names %}
+	        for {{patrol_names[selected_patrol]}}
+	    {% endif %}
+	</h2></center>
     {% endif %}
 
 {% endblock %}
