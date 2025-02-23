@@ -89,18 +89,32 @@ class Heat:
                 "times": self.times
                 }
 
+class Design:
+    def __init__(self, participant):
+        self.participant = participant
+        self.scores = {}  # {judge_id: score}
+
+    def toJSON(self):
+        return {
+            "participant_id": self.participant.participant_id,
+            "scores": self.scores,
+        }
+
 # Race Data
 participants = []
 races = []
 initial_races_completed = {p:False for p in patrol_names}
 semi_final_races_completed = {p:False for p in patrol_names if p != "Exhibition"}
+designs = []
 
 def load_data():
     try:
         with open(DATA_FILE, "r") as f:
             data = json.load(f)
             # Reconstruct participants, races, etc. from loaded data
-            global participants, races, initial_races_completed, semi_final_races_completed, race_index, heat_index
+            global participants, races, initial_races_completed, semi_final_races_completed
+            global designs
+
             participants = []
             for p_data in data.get("participants", []):
                 p = Participant(p_data["first_name"], p_data["last_name"], p_data["patrol"])
@@ -128,8 +142,19 @@ def load_data():
                     r.heats.append(h)
                 races.append(r)
 
+            designs = []
+            for d_data in data.get("designs", []):
+                p_id = d_data["participant_id"]
+                participant = next((p for p in participants if p.participant_id == p_id), None)
+                if participant:
+                    d = Design(participant)
+                    d.scores = d_data.get("scores", {}) # Load scores
+                    designs.append(d)
+
+
             initial_races_completed = data.get("initial_races_completed", {})
             semi_final_races_completed = data.get("semi_final_races_completed", {})
+
     except FileNotFoundError:
         pass  # Start with empty data if the file doesn't exist
 
@@ -137,6 +162,7 @@ def save_data():
     data = {
         "participants": [p.toJSON() for p in participants],
         "races": [r.toJSON() for r in races],
+        "designs": [d.toJSON() for d in designs],
         "initial_races_completed": initial_races_completed,
         "semi_final_races_completed": semi_final_races_completed,
     }
@@ -146,6 +172,14 @@ def save_data():
 # Load data when the app starts
 try:
     load_data()
+    if participants: # Only initialize if there are participants
+        save = False
+        for p in participants:
+            if p not in [d.participant for d in designs]:
+                designs.append(Design(p))
+                save = True
+        if save:
+            save_data() # Save the designs
 except Exception as e:
     print(f"Encountered exception loading saved data")
     traceback.print_exc()
@@ -214,6 +248,8 @@ def participant_times(participant_id):
 
 def add_participant(first_name,last_name, patrol):
 
+    global participants, designs
+
     if patrol in patrol_names.values():
         for k,v in patrol_names.items():
             if v == patrol:
@@ -237,6 +273,8 @@ def add_participant(first_name,last_name, patrol):
         new_p.car_name = f"{patrol_names.get(patrol)[:1]}{next_car_number}"
 
         participants.append(new_p)
+
+        designs.append(Design(p))
 
         return new_p
     else:
@@ -529,6 +567,34 @@ def get_best_time_race_number(participant):
                                return race.race_number
     return None
 
+@app.route("/judge_design", methods=["GET", "POST"])
+def judge_design():
+    global designs
+
+    racers = {}
+    for patrol in patrol_names:
+        racers[patrol] = [p for p in participants if p.patrol == patrol]
+
+    if request.method == "POST":
+        judge_id = request.form.get("judge_id") # Get judge ID from the form
+        if not judge_id: # Generate one if not provided
+            judge_id = uuid.uuid4().hex
+
+        for racer in participants:
+            rank = request.form.get(f"rank_{racer.participant_id}")
+            if rank:
+                design = next((d for d in designs if d.participant == racer), None)
+                if design:
+                    design.scores[judge_id] = int(rank)
+        save_data()
+        return redirect(url_for("design_results"))
+
+    return render_template("judge_design.html", racers=racers, patrol_names=patrol_names)
+
+@app.route("/design_results")
+def design_results():
+        return render_template("design_results.html", designs=designs, patrol_names=patrol_names)
+
 @app.route("/display_results")
 def display_results():
     sorted_participants = sorted(participants, key=lambda x: (x.average_time, x.best_time))
@@ -582,7 +648,10 @@ def load_roster(filename):
     with open(filename) as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
-            add_participant(row["First Name"], row["Last Name"], row["Patrol"])
+            p=add_participant(row["First Name"], row["Last Name"], row["Patrol"])
+            if "car_weight_oz" in row:
+                p.car_weight_oz = row["car_weight_oz"]
+
 
 @app.route("/api/participants")
 def api_participants():
@@ -596,6 +665,9 @@ def api_patrol_names():
 def api_races():
     return jsonify([r.toJSON() for r in races])
 
+@app.route("/api/designs")
+def api_designs():
+    return jsonify([d.toJSON() for d in designs])
 
 
 

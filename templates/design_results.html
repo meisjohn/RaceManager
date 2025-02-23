@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>Car Design Judging Results</h1>
+    <table>
+        <thead>
+            <tr>
+                    <th>Patrol</th>
+                    <th>Car Name</th>
+                    <th>Score</th>
+                </tr>
+            </thead>
+        <tbody>
+            {% for patrol_id, patrol_name in patrol_names.items() %}
+                {% for design in designs %}
+                    {% if design.participant.patrol == patrol_id %}
+                        <tr>
+                            <td>{{ patrol_name }}</td>
+                            <td>{{ design.participant.car_name }}</td>
+                            <td>
+                                {% set total_score = 0 %}
+                                {% for score in design.scores.values() %}
+                                    {% set total_score = total_score + score %}
+                                {% endfor %}
+                                {{ total_score }}
+                            </td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+            </tbody>
+        </table>
+	<br>
+	<a href="/judge_design"><button>Go to Judging Forms</button></a>
+
+{% endblock %}
