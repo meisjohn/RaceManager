@@ -1,5 +1,5 @@
 from ast import Num
-from flask import Flask, render_template, request, redirect, url_for, jsonify, Response
+from flask import Flask, render_template, request, redirect, url_for, jsonify, Response, flash
 import itertools
 import json
 import os
@@ -8,9 +8,12 @@ import csv
 from io import StringIO
 import traceback
 import uuid
+from collections import defaultdict
+import secrets
 
 
 app = Flask(__name__)
+app.secret_key = secrets.token_urlsafe(16)
 
 # Load patrol names from JSON config file
 try:
@@ -106,6 +109,7 @@ races = []
 initial_races_completed = {p:False for p in patrol_names}
 semi_final_races_completed = {p:False for p in patrol_names if p != "Exhibition"}
 designs = []
+judging_active = True
 
 def load_data():
     try:
@@ -570,6 +574,9 @@ def get_best_time_race_number(participant):
 @app.route("/judge_design", methods=["GET", "POST"])
 def judge_design():
     global designs
+    global judging_active
+    if not judging_active:
+        return "Judging is closed.", 403  # Or redirect, or display a message
 
     racers = {}
     for patrol in patrol_names:
@@ -580,10 +587,10 @@ def judge_design():
         if not judge_id: # Generate one if not provided
             judge_id = uuid.uuid4().hex
 
-        for racer in participants:
-            rank = request.form.get(f"rank_{racer.participant_id}")
+        for p in participants:
+            rank = request.form.get(f"rank_{p.participant_id}")
             if rank:
-                design = next((d for d in designs if d.participant == racer), None)
+                design = next((d for d in designs if d.participant == p), None)
                 if design:
                     design.scores[judge_id] = int(rank)
         save_data()
@@ -591,9 +598,64 @@ def judge_design():
 
     return render_template("judge_design.html", racers=racers, patrol_names=patrol_names)
 
+@app.route("/close_judging")
+def close_judging():
+    global judging_active
+    judging_active = False
+    return redirect(url_for("design_results"))
+
+@app.route("/open_judging")
+def open_judging():
+    global judging_active
+    judging_active = True
+    return redirect(url_for("design_results"))
+
+
+def score_design(design):
+    total_score = 0
+    first = 0
+    second = 0
+    third = 0
+    for judge_rank in design.scores.values():
+        if judge_rank == 1:
+            total_score += 3
+            first += 1
+        elif judge_rank == 2:
+            total_score += 2
+            second += 1
+        elif judge_rank == 3:
+            total_score += 1
+            third += 1
+
+    return (total_score,first,second,third)
+
 @app.route("/design_results")
 def design_results():
-        return render_template("design_results.html", designs=designs, patrol_names=patrol_names)
+
+    sorted_scores_by_patrol = {}
+
+    for patrol in patrol_names:
+        patrol_scores = []
+        for p in participants:
+            if p.patrol == patrol:
+                design = next((d for d in designs if d.participant == p), None)
+                if design:
+                    design_score = score_design(design)
+                else:
+                    design_score = (0,0,0,0)
+                patrol_scores.append((p, design_score[0], design_score[1],
+                                      design_score[2], design_score[3]))
+
+        # Sort the scores by total score, #first votes, #second votes, #third votes
+        patrol_scores.sort(key=lambda x: (-x[1], -x[2], -x[3], -x[4]))
+        sorted_scores_by_patrol[patrol] = patrol_scores[:3] #Take the top 3
+        
+
+    return render_template("design_results.html", 
+                           patrol_names=patrol_names, 
+                           sorted_scores_by_patrol=sorted_scores_by_patrol,
+                           judging_active=judging_active)
+
 
 @app.route("/display_results")
 def display_results():
@@ -644,14 +706,58 @@ def download_racer_data(participant_id):
         headers={"Content-Disposition": f"attachment; filename=racer_{participant_id}_data.csv"},
     )
 
-def load_roster(filename):
-    with open(filename) as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            p=add_participant(row["First Name"], row["Last Name"], row["Patrol"])
-            if "car_weight_oz" in row:
-                p.car_weight_oz = row["car_weight_oz"]
+@app.route("/upload_roster", methods=["GET", "POST"])
+def upload_roster():
+    if request.method == "POST":
+        if 'file' not in request.files:
+            flash('No file part')
+            return redirect(request.url)
+        file = request.files['file']
+        if file.filename == '':
+            flash('No selected file')
+            return redirect(request.url)
 
+        if file and (file.filename.endswith('.csv') or file.filename.endswith(".txt")): # Check file extension
+            try:
+                # Load from memory
+                csv_file = file.stream.read().decode('utf-8')
+                load_roster_from_memory(csv_file) # See function below
+                save_data() # Save data after loading roster
+                flash('Roster uploaded successfully!')
+                return redirect(url_for('index')) # Redirect to your main page
+
+            except Exception as e:
+                flash(f'Error uploading roster: {str(e)}') # Display error message
+                traceback.print_exc()
+
+        else:
+            flash('Invalid file type. Please upload a CSV file.')
+
+        return redirect(request.url) # Redirect back to the upload page
+
+    return render_template("upload_roster.html")
+
+def load_roster_from_memory(csv_string):
+    csvfile = StringIO(csv_string)
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+        p = add_participant(row["First Name"], row["Last Name"], row["Patrol"])
+        if "car_weight_oz" in row:
+            try:
+                p.car_weight_oz = float(row["car_weight_oz"]) # Convert to float
+            except ValueError:
+                print(f"Invalid car_weight_oz: {row['car_weight_oz']}")  # Log the error
+
+@app.route("/download_roster_template")
+def download_roster_template():
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["First Name", "Last Name", "Patrol", "car_weight_oz"]) # Header row
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=roster_template.csv"},
+    )
 
 @app.route("/api/participants")
 def api_participants():

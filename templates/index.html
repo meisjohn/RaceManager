@@ -9,7 +9,7 @@
     {% endif %}
 
     <form method="POST">
-        First Name: <input type="text" name="first_name" required><br>
+        First Name: <input type="text" name="first_name" autofocus required><br>
 	Last Name: <input type="text" name="last_name" required><br>
 	Patrol: <select name="patrol" required>
 	    {% for id, name in patrol_names.items() %}

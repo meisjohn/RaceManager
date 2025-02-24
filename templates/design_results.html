@@ -1,35 +1,35 @@
 {% extends "base.html" %}
 {% block content %}
     <h1>Car Design Judging Results</h1>
-    <table>
-        <thead>
-            <tr>
-                    <th>Patrol</th>
-                    <th>Car Name</th>
-                    <th>Score</th>
+	{% if not judging_active %}
+            <table>
+            <thead>
+                <tr>
+		    <th>Patrol</th>
+                    <th>Car</th>
+		    <th><center>Score</center></th>
                 </tr>
             </thead>
-        <tbody>
-            {% for patrol_id, patrol_name in patrol_names.items() %}
-                {% for design in designs %}
-                    {% if design.participant.patrol == patrol_id %}
-                        <tr>
+            <tbody>
+                {% for patrol_id, patrol_name in patrol_names.items() %}
+	    	    {% for s in sorted_scores_by_patrol[patrol_id]: %}
+    			<tr>
                             <td>{{ patrol_name }}</td>
-                            <td>{{ design.participant.car_name }}</td>
-                            <td>
-                                {% set total_score = 0 %}
-                                {% for score in design.scores.values() %}
-                                    {% set total_score = total_score + score %}
-                                {% endfor %}
-                                {{ total_score }}
-                            </td>
+    			    <td><strong>{{ s[0].car_name }}</strong> {{s[0].first_name}} {{s[0].last_name}}</td>
+			    <td><center>{{ s[1] }}</center></td>
                         </tr>
-                    {% endif %}
+                    {% endfor %}
                 {% endfor %}
-            {% endfor %}
-            </tbody>
-        </table>
-	<br>
-	<a href="/judge_design"><button>Go to Judging Forms</button></a>
+                </tbody>
+            </table>
+	    <br>
+	    <a href="/open_judging"><button>Open Judging Period</button></a>
+        {% else %}
+	    <h2><center>Scores will be available at the end of judging</center></h2>
+	    <br>
+	    <a href="/close_judging"><button>Close Judging Period</button></a>
+	    <br>
+	    <a href="/judge_design"><button>Go to Judging Forms</button></a>
+	{% endif %}
 
 {% endblock %}

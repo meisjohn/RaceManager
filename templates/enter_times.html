@@ -27,7 +27,7 @@
                     {% for lane in range(1, NUM_LANES + 1) %}
                         <td>
                             {% if heat.lanes.get(lane) %}
-                                <input type="number" step="0.01" name="time_race_{{ race.race_number }}_heat_{{ heat.heat_number }}_lane_{{ lane }}" value="{% if heat.times.get(lane) %}{{ heat.times[lane] }}{% endif %}">
+			    <input type="number" step="0.01" name="time_race_{{ race.race_number }}_heat_{{ heat.heat_number }}_lane_{{ lane }}" value="{% if heat.times.get(lane) %}{{ heat.times[lane] }}{% endif %}" {%if lane == 1 %} autofocus {%endif%}>
                             {% endif %}
                         </td>
                     {% endfor %}
