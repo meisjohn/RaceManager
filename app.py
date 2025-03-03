@@ -1,15 +1,17 @@
 from ast import Num
-from flask import Flask, render_template, request, redirect, url_for, jsonify, Response, flash
+from flask import Flask, render_template, request, redirect, url_for, \
+    jsonify, Response, flash, session
 import itertools
 import json
 import os
+import os.path
 from enum import Enum
 import csv
 from io import StringIO
 import traceback
 import uuid
-from collections import defaultdict
 import secrets
+import qrcode
 
 
 app = Flask(__name__)
@@ -29,9 +31,20 @@ except FileNotFoundError:
         "Exhibition": "Exhibition"
     }
 
+try:
+    with open("auth_config.json", 'r') as f:
+        auth_config = json.load(f)
+except FileNotFoundError:
+    auth_config = {}
+
 NUM_LANES = 4
 
 DATA_FILE = "race_data.json"  # Define the filename for storing data
+
+class Role(Enum):
+    PUBLIC = 0
+    JUDGE = 1
+    OWNER = 2
 
 class Rounds(Enum):
     NONE = 0
@@ -110,6 +123,7 @@ initial_races_completed = {p:False for p in patrol_names}
 semi_final_races_completed = {p:False for p in patrol_names if p != "Exhibition"}
 designs = []
 judging_active = True
+judges = {}
 
 def load_data():
     try:
@@ -187,6 +201,76 @@ try:
 except Exception as e:
     print(f"Encountered exception loading saved data")
     traceback.print_exc()
+
+@app.route("/owner_login", methods=["POST"])
+def owner_login():
+    token = request.form.get("token")
+    if token == auth_config.get("owner_token"):
+        session["role"] = Role.OWNER.name
+        return redirect(url_for("index"))  # Redirect to owner's page
+    return render_template("login.html", error_message="Invalid token"), 401
+
+def generate_qr(url,id):
+
+    qr = qrcode.QRCode(box_size=10, border=4)
+    qr.add_data(url)
+    qr.make(fit=True)
+    image = qr.make_image()
+
+    filename = f"{id}.png"
+    file_path=os.path.join(os.curdir, "static", "qr", filename)
+    image.save(file_path)
+
+    return filename
+
+@app.route("/judge_login", methods=["POST"])
+def judge_login():
+    global judges
+    role = session.get('role')
+    token = request.form.get("token")
+    judge_name = request.form.get("judge_name", None)
+    if token == auth_config.get("judge_token"):
+        if judge_name not in judges:
+            if role and Role[role] == Role.OWNER:
+                id = uuid.uuid4().hex
+                judges[judge_name] = {}
+                judges[judge_name]['id'] = id
+                url = request.url_root.rstrip('/') + url_for("login", judge_token=token, judge_name=judge_name)
+                judges[judge_name]["qr"] = generate_qr(url, id )
+            else:
+                return render_template("login.html", error_message="Only the owner can create new Judge logins"), 403
+
+        # Owner can create judge roles, but isn't a judge
+        if (role and Role[role] != Role.OWNER) or not role:
+            session["role"] = Role.JUDGE.name
+            session["judge_name"] = judge_name
+            return redirect(url_for("judge_design"))  # Redirect to judge's page
+        else:
+            return redirect(url_for("login", judge_name=judge_name)) # Owner might be making multiple judges
+    return render_template("login.html", error_message="Invalid token"), 401
+
+@app.route("/logout")
+def logout():
+    session.pop("role", None)  # Remove the role from the session
+    session.pop("judge_name", None)
+    return redirect(url_for("index"))  # Or wherever you want to redirect
+
+@app.route("/login")
+def login():
+    role = session.get('role')
+    token = request.args.get("judge_token", None)
+    judge_name = request.args.get("judge_name", None)
+    if role and Role[role] == Role.OWNER and judge_name in judges:
+        judge_token = auth_config.get('judge_token')
+        judge_qr = url_for('static', filename=os.path.join('qr', judges[judge_name]['qr']))
+    else:
+        judge_qr = None
+        judge_token = token
+    if judge_name is not None:
+        return render_template("login.html", judge_name=judge_name, judge_token=judge_token, judge_qr=judge_qr)
+    else:
+        return render_template("login.html")
+
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -575,28 +659,33 @@ def get_best_time_race_number(participant):
 def judge_design():
     global designs
     global judging_active
-    if not judging_active:
-        return "Judging is closed.", 403  # Or redirect, or display a message
+
+    role = session.get('role', Role.PUBLIC.name)
+    judge_name = session.get('judge_name', None)
+    error_message = ""
 
     racers = {}
     for patrol in patrol_names:
         racers[patrol] = [p for p in participants if p.patrol == patrol]
 
-    if request.method == "POST":
-        judge_id = request.form.get("judge_id") # Get judge ID from the form
-        if not judge_id: # Generate one if not provided
-            judge_id = uuid.uuid4().hex
+    if not judging_active:
+        error_message = "Judging is closed."
+
+    if not error_message and Role[role] != Role.JUDGE:
+        error_message = "This page is only for authorized Judges, please log in."
+
+    if not error_message and request.method == "POST":
+        judge_id = judges[judge_name]['id']
 
         for p in participants:
-            rank = request.form.get(f"rank_{p.participant_id}")
-            if rank:
-                design = next((d for d in designs if d.participant == p), None)
-                if design:
-                    design.scores[judge_id] = int(rank)
+            rank = request.form.get(f"rank_{p.participant_id}", 0)
+            design = next((d for d in designs if d.participant == p), None)
+            if design:
+                design.scores[judge_id] = int(rank)
         save_data()
         return redirect(url_for("design_results"))
 
-    return render_template("judge_design.html", racers=racers, patrol_names=patrol_names)
+    return render_template("judge_design.html", racers=racers, patrol_names=patrol_names, judge_name=judge_name, error_message=error_message)
 
 @app.route("/close_judging")
 def close_judging():
@@ -775,6 +864,9 @@ def api_races():
 def api_designs():
     return jsonify([d.toJSON() for d in designs])
 
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
 
 
 if __name__ == "__main__":

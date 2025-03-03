@@ -31,16 +31,16 @@
             color: white;
         }
 
-	tr:hover {
-            background-color: #e0e0e0;
-        }
+        tr:hover {
+                background-color: #e0e0e0;
+            }
 
-	button.big {
-            padding: 10px 15px;
-            border-radius: 3px;
-            cursor: pointer;
-	    font-size: larger;
-	}
+        button.big {
+                padding: 10px 15px;
+                border-radius: 3px;
+                cursor: pointer;
+            font-size: larger;
+        }
 
         input[type="text"],
         input[type="number"],
@@ -50,7 +50,7 @@
             border-radius: 3px;
         }
 
-        input[type="submit"] {
+        input[type="submit"], button.medium {
             background-color: #0052A5;
             color: white;
             padding: 10px 15px;
@@ -80,6 +80,10 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             border-radius: 5px;
         }
+        .container img {
+            object-fit: contain;
+        }
+
          nav {
             background-color: #0052A5; /* Trail Life blue */
             padding: 10px;
@@ -113,8 +117,15 @@
            /* ... (same as before) */
            margin-top: 20px; /* Add top margin to separate from nav */
         }
-        .error {
-            color: red;
+        .error-message {
+            background-color: #ffe6e6;
+            border: 2px solid #800000;
+            color: #800000;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
         }
 
     </style>
@@ -131,8 +142,12 @@
             <li><a href="/">Participants</a></li>
             <li><a href="/schedule">Race Schedule</a></li>
             <li><a href="/display_results">Race Results</a></li>
-            <li><a href="/design_results">Design Results</a></li>  </ul>
-
+            <li><a href="/design_results">Design Results</a></li>
+            {% if session['role'] %}
+            <li><a href="/login">{{ session['role']|title }}: Manage Role</a></li>
+            {% else %}
+            <li><a href="/login">Login</a></li>
+            {% endif %}
         </ul>
     </nav>
     <div class="container">
@@ -140,3 +155,4 @@
     </div>
 </body>
 </html>
+

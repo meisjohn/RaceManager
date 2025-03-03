@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+
+    {% if error_message %}
+        <p class="error-message">{{error_message}}</p>
+    {% endif %}
+
+    {% if not session['role'] %}
+    <h1>Set User Role</h1>
+    <div>
+        <form method="POST" action="/owner_login">
+            <label for="token">Owner Token: </label> 
+            <input type="text" name="token">
+            <input type="submit" value="Login">
+        </form>
+    </div> 
+
+    {% endif %}
+
+    <div>
+    {% if session['role'] == "OWNER" %}
+     <h1>Add Judge</h1>
+    {% endif %}
+    {% if session['role'] != "JUDGE" %}
+        <form method="POST" action="/judge_login">
+            <label for="token">Judge Token: </label> 
+            <input type="text" name="token" {%if judge_token %} value="{{judge_token}}"{% endif %}>
+            <label for="token">Judge Name: </label> 
+            <input type="text" name="judge_name" {%if judge_name %} value="{{judge_name}}"{% endif %}>
+            {% if session['role'] == "OWNER" %}
+                <input type="submit" value="Add">
+            {% else %}
+                <input type="submit" value="Login">
+            {% endif %}
+        </form>
+    {% endif %}
+
+    {% if judge_qr %}
+        <h2>QR Code for {{judge_name}} </h2>
+        <img src="{{judge_qr}}">
+        <p></p>
+    {% endif %}
+      
+    </div>
+
+    {% if session['role'] %}
+    <div>
+        <p></p>
+        <a href="/logout"><button class="medium">Logout</button></a>
+    </div>
+    {% endif %}
+
+{% endblock %}
+

@@ -2,66 +2,74 @@
 {% block content %}
     <h1>Judge Car Designs</h1>
 
-    <form method="POST">
-        <label for="judge_id">Judge ID (optional):</label>
-        <input type="text" name="judge_id" id="judge_id"><br><br>  </input>
+    {% if error_message %}
+        <p class="error-message">{{error_message}}</p>
+    {% endif %}
 
-        {% for patrol_id, patrol_name in patrol_names.items() %}  </input>
-            <h2>{{ patrol_name }}</h2>
-                <table>
-                <thead>
-                    <tr>
-                            <th>Car Name</th>
-                            <th>1st</th>
-                            <th>2nd</th>
-                            <th>3rd</th>
-                        </tr>
-                </thead>
-                <tbody>
-                    {% for racer in racers[patrol_id] %}
-                            <tr>
-                                <td>{{ racer.car_name }}</td>
-                            {% for i in range(1,4) %}
-                              <td><input type="radio" 
-				      name="rank_{{ racer.participant_id }}" 
-				      id="rank_{{ racer.participant_id }}_{{ i }}" 
-				      value="{{ i }}" 
-				      data-patrol="{{ patrol_id }}" 
-				      data-rank="{{ i }}"></td>
-                            {% endfor %}
+    {% if session['role'] == "JUDGE" %}
+        <h2> Submitting votes for {{judge_name}}</h2>
+
+        <form method="POST">
+
+            {% for patrol_id, patrol_name in patrol_names.items() %}  </input>
+                <h2>{{ patrol_name }}</h2>
+                    <table>
+                    <thead>
+                        <tr>
+                                <th>Car Name</th>
+                                <th>1st</th>
+                                <th>2nd</th>
+                                <th>3rd</th>
                             </tr>
-                        {% endfor %}
-                </tbody>
-            </table>
-            {% endfor %}
+                    </thead>
+                    <tbody>
+                        {% for racer in racers[patrol_id] %}
+                                <tr>
+                                    <td>{{ racer.car_name }}</td>
+                                {% for i in range(1,4) %}
+                                <td><input type="radio" 
+                        name="rank_{{ racer.participant_id }}" 
+                        id="rank_{{ racer.participant_id }}_{{ i }}" 
+                        value="{{ i }}" 
+                        data-patrol="{{ patrol_id }}" 
+                        data-rank="{{ i }}"></td>
+                                {% endfor %}
+                                </tr>
+                            {% endfor %}
+                    </tbody>
+                </table>
+                {% endfor %}
 
-            <button class="big" type="submit">Submit Judging</button>
-        </form>
-    <script>
-            const radioButtons = document.querySelectorAll('input[type="radio"]');
+                <button class="big" type="submit">Submit Judging</button>
+            </form>
+        <script>
+                const radioButtons = document.querySelectorAll('input[type="radio"]');
 
-            radioButtons.forEach(radioButton => {
-                radioButton.addEventListener('change', function() {
-                const patrol = this.dataset.patrol;
-                const rank = this.dataset.rank;
+                radioButtons.forEach(radioButton => {
+                    radioButton.addEventListener('change', function() {
+                    const patrol = this.dataset.patrol;
+                    const rank = this.dataset.rank;
 
-                // Disable other radio buttons with the same rank within the patrol
-                const otherButtonsInPatrolWithSameRank = document.querySelectorAll(`input[type="radio"][data-patrol="${patrol}"][data-rank="${rank}"]`);
-                otherButtonsInPatrolWithSameRank.forEach(button => {
-                    if (button !== this) {
-                            button.checked = false; // Uncheck
-                        }
+                    // Disable other radio buttons with the same rank within the patrol
+                    const otherButtonsInPatrolWithSameRank = document.querySelectorAll(`input[type="radio"][data-patrol="${patrol}"][data-rank="${rank}"]`);
+                    otherButtonsInPatrolWithSameRank.forEach(button => {
+                        if (button !== this) {
+                                button.checked = false; // Uncheck
+                            }
+                    });
+
+                    // Disable other radio buttons for the same car
+                    const otherButtonsForSameCar = document.querySelectorAll(`input[type="radio"][name="rank_${this.name.split('_')[1]}"]`);
+                    otherButtonsForSameCar.forEach(button => {
+                        if (button !== this) {
+                                button.checked = false; // Uncheck
+                            }
+                    });
                 });
-
-                 // Disable other radio buttons for the same car
-                const otherButtonsForSameCar = document.querySelectorAll(`input[type="radio"][name="rank_${this.name.split('_')[1]}"]`);
-                otherButtonsForSameCar.forEach(button => {
-                    if (button !== this) {
-                            button.checked = false; // Uncheck
-                        }
                 });
-            });
-            });
-        </script>
+            </script>
+
+    {% endif %}
+
 
 {% endblock %}

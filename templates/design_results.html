@@ -1,13 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
     <h1>Car Design Judging Results</h1>
+
+    {% if error_message %}
+        <p class="error-message">{{error_message}}</p>
+    {% endif %}
+
 	{% if not judging_active %}
             <table>
             <thead>
                 <tr>
 		    <th>Patrol</th>
                     <th>Car</th>
-		    <th><center>Score</center></th>
+		    <th><div style="text-align: center;">Score</div></th>
                 </tr>
             </thead>
             <tbody>
@@ -16,20 +21,24 @@
     			<tr>
                             <td>{{ patrol_name }}</td>
     			    <td><strong>{{ s[0].car_name }}</strong> {{s[0].first_name}} {{s[0].last_name}}</td>
-			    <td><center>{{ s[1] }}</center></td>
+			    <td><div style="text-align: center;">{{ s[1] }}</div></td>
                         </tr>
                     {% endfor %}
                 {% endfor %}
                 </tbody>
             </table>
 	    <br>
-	    <a href="/open_judging"><button>Open Judging Period</button></a>
-        {% else %}
-	    <h2><center>Scores will be available at the end of judging</center></h2>
+        {% if session['role'] == "OWNER" %}
+	        <a href="/open_judging"><button>Open Judging Period</button></a>
+        {% endif %}
+    {% else %}
+	    <div style="text-align: center;"><h2>Scores will be available at the end of judging</h2></div>
 	    <br>
-	    <a href="/close_judging"><button>Close Judging Period</button></a>
-	    <br>
-	    <a href="/judge_design"><button>Go to Judging Forms</button></a>
+        {% if session['role'] == "OWNER" %}
+	        <a href="/close_judging"><button>Close Judging Period</button></a>
+        {% elif session['role'] == "JUDGE" %}
+	        <a href="/judge_design"><button>Go to Judging Forms</button></a>
+        {% endif %}
 	{% endif %}
 
 {% endblock %}
