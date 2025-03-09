@@ -121,17 +121,20 @@ participants = []
 races = []
 initial_races_completed = {p:False for p in patrol_names}
 semi_final_races_completed = {p:False for p in patrol_names if p != "Exhibition"}
-designs = []
+designs = {}
 judging_active = True
 judges = {}
 
 def load_data():
+    resave = False
     try:
         with open(DATA_FILE, "r") as f:
             data = json.load(f)
             # Reconstruct participants, races, etc. from loaded data
             global participants, races, initial_races_completed, semi_final_races_completed
             global designs
+            global judges
+            global judging_active
 
             participants = []
             for p_data in data.get("participants", []):
@@ -160,27 +163,36 @@ def load_data():
                     r.heats.append(h)
                 races.append(r)
 
-            designs = []
-            for d_data in data.get("designs", []):
-                p_id = d_data["participant_id"]
+            designs = {}
+            for p_id,d_data in data.get("designs", {}).items():
                 participant = next((p for p in participants if p.participant_id == p_id), None)
                 if participant:
                     d = Design(participant)
                     d.scores = d_data.get("scores", {}) # Load scores
-                    designs.append(d)
+                    designs[p_id] = d
+            for p in participants:
+                if p.participant_id not in designs:
+                    resave = True
+                    designs[p.participant_id] = Design(p)
 
-
+            judges = data.get("judges", {})
             initial_races_completed = data.get("initial_races_completed", {})
             semi_final_races_completed = data.get("semi_final_races_completed", {})
+            judging_active = data.get("judging_active", True)
 
     except FileNotFoundError:
-        pass  # Start with empty data if the file doesn't exist
+        save_data()
+
+    if resave:
+        save_data()
 
 def save_data():
     data = {
         "participants": [p.toJSON() for p in participants],
         "races": [r.toJSON() for r in races],
-        "designs": [d.toJSON() for d in designs],
+        "designs": {p_id: d.toJSON() for p_id, d in designs.items()},
+        "judges": judges,
+        "judging_active": judging_active,
         "initial_races_completed": initial_races_completed,
         "semi_final_races_completed": semi_final_races_completed,
     }
@@ -190,14 +202,6 @@ def save_data():
 # Load data when the app starts
 try:
     load_data()
-    if participants: # Only initialize if there are participants
-        save = False
-        for p in participants:
-            if p not in [d.participant for d in designs]:
-                designs.append(Design(p))
-                save = True
-        if save:
-            save_data() # Save the designs
 except Exception as e:
     print(f"Encountered exception loading saved data")
     traceback.print_exc()
@@ -237,6 +241,7 @@ def judge_login():
                 judges[judge_name]['id'] = id
                 url = request.url_root.rstrip('/') + url_for("login", judge_token=token, judge_name=judge_name)
                 judges[judge_name]["qr"] = generate_qr(url, id )
+                save_data()
             else:
                 return render_template("login.html", error_message="Only the owner can create new Judge logins"), 403
 
@@ -294,9 +299,9 @@ def index():
                            patrol_names=patrol_names,
                            error=error)  # Pass error to the template
 
-@app.route("/edit_participant/<int:participant_id>", methods=["GET", "POST"])
+@app.route("/edit_participant/<participant_id>", methods=["GET", "POST"])
 def edit_participant(participant_id):
-    participant = next((p for p in participants if p.car_number == participant_id), None) # Find by car_number
+    participant = next((p for p in participants if p.participant_id == participant_id), None) 
     if not participant:
         return "Participant not found", 404
 
@@ -315,20 +320,22 @@ def edit_participant(participant_id):
 
     return render_template("edit_participant.html", participant=participant, patrol_names = patrol_names)
 
-@app.route("/delete_participant/<int:participant_id>", methods=["POST"])
+@app.route("/delete_participant/<participant_id>", methods=["POST"])
 def delete_participant(participant_id):
-    participant = next((p for p in participants if p.car_number == participant_id), None)
+    participant = next((p for p in participants if p.participant_id == participant_id), None)
     if not participant:
         return "Participant not found", 404
 
+    if participant_id in designs:
+        del designs[participant_id]
     participants.remove(participant)  # Remove the participant
 
     save_data() # Save data after removing participant
     return redirect(url_for("index"))  # Redirect back to the participant list
 
-@app.route("/participant_times/<int:participant_id>")
+@app.route("/participant_times/<participant_id>")
 def participant_times(participant_id):
-    participant = next((p for p in participants if p.car_number == participant_id), None)
+    participant = next((p for p in participants if p.participant_id == participant_id), None)
     if not participant:
         return "Participant not found", 404
     return render_template("participant_times.html", participant=participant, patrol_names=patrol_names)
@@ -358,11 +365,11 @@ def add_participant(first_name,last_name, patrol):
             next_car_number = 1  # Start at 1 if no existing numbers
 
         new_p.car_number = next_car_number
-        new_p.car_name = f"{patrol_names.get(patrol)[:1]}{next_car_number}"
+        new_p.car_name = f"{patrol_names.get(patrol)[:1]}{next_car_number:02}"
 
         participants.append(new_p)
 
-        designs.append(Design(p))
+        designs[new_p.participant_id] = Design(p)
 
         return new_p
     else:
@@ -405,13 +412,16 @@ def schedule_semi_final_races(patrol):
         return  # Don't schedule semi's if we havent finished the races
 
     top_racers,_ = get_top_racers(Rounds.FIRST, patrol, NUM_LANES)
+    name_sorted_top_racers = sorted(top_racers, key=lambda racer: racer.car_name)
 
     if top_racers:
-        race_groups = [top_racers]  # Create a single group of top racers
+        race_groups = [name_sorted_top_racers]  # Create a single group of top racers
         assign_paired_lanes(race_groups, Rounds.SEMI, len(races) + 1) 
 
 def schedule_final_races():
     global races
+    if not all(semi_final_races_completed.values()):
+        return
 
     # 1. Get Top Racers from Semi-Finals:
     top_racers = []
@@ -433,7 +443,7 @@ def get_top_racers(round: Rounds, patrol = None, racer_count=NUM_LANES):
     if patrol is not None and patrol != "":
         filtered_races = [r for r in races if r.round == round and r.patrol == patrol]
     else:
-        filtered_races = [r for r in races if r.round == round]
+        filtered_races = [r for r in races if r.round == round and r.patrol != "Exhibition"]
     if filtered_races: # Only if semi-final races exist for this patrol
         all_racer_averages = {}
         for race in filtered_races:
@@ -522,6 +532,8 @@ def assign_all_lanes(race_group, round: Rounds, race_number_start):
 
 @app.route("/enter_times/<int:race_number>/<int:heat_number>", methods=["GET", "POST"])
 def enter_times(race_number, heat_number):
+    role = session.get('role', Role.PUBLIC.name)
+    error_message = None
     race = next((r for r in races if r.race_number == race_number), None)
     if not race:
         return "Race not found", 404
@@ -529,24 +541,78 @@ def enter_times(race_number, heat_number):
     if not heat:
         return "Heat not found", 404
 
-    if request.method == "POST":
-      for lane in range(1, NUM_LANES + 1):
-          time_key = f"time_race_{race_number}_heat_{heat_number}_lane_{lane}"
-          time = request.form.get(time_key, None)
-          if time is not None:
-              try:
-                  time = float(time)
-                  heat.times[lane] = time
-                  participant = heat.lanes.get(lane)
-                  if participant:
-                      participant.times.append(time)
-                      calculate_race_statistics(participant)
-              except ValueError:
-                  return "Invalid time input", 400
-      save_data() # Saving data after entering race times
-      return redirect(url_for("schedule", patrol=race.patrol, round=race.round.value)) # Add round parameter
+    if Role[role] != Role.OWNER:
+        error_message = "This page is only intended for the Owner, please log in."
+    else:
 
-    return render_template("enter_times.html", race=race, heat=heat, NUM_LANES=NUM_LANES)
+        if request.method == "POST":
+            submit = request.form.get("submit", None)
+            for lane in range(1, NUM_LANES + 1):
+                time_key = f"time_race_{race_number}_heat_{heat_number}_lane_{lane}"
+                time = request.form.get(time_key, None)
+                if time is not None:
+                    try:
+                        time = float(time)
+                        heat.times[lane] = time
+                        participant = heat.lanes.get(lane)
+                        if participant:
+                            participant.times.append(time)
+                            calculate_race_statistics(participant)
+                    except ValueError:
+                        return "Invalid time input", 400
+            save_data() # Saving data after entering race times
+
+            if heat_number == len(race.heats):
+                next_race = next((r for r in races if r.race_number == race_number+1), None)
+                if next_race is not None and next_race.patrol == race.patrol:
+                    next_race_number = next_race.race_number
+                    next_heat_number = 1
+                else:
+                    next_race_number = None
+                    next_heat_number = None
+            else:
+                next_race_number = race.race_number
+                next_heat_number = heat_number + 1
+                if next((r for r in races if r.race_number == next_race_number), None) == None:
+                    next_race_number = None
+                    next_heat_number = None
+                    
+            if submit == "Submit & Go to Next Race" and next_race_number is not None:
+                # Go to the next race
+                return redirect(url_for("enter_times", race_number=next_race_number, heat_number=next_heat_number)) # Add round parameter
+            else:
+                # Go to the list
+                return redirect(url_for("schedule", patrol=race.patrol, round=race.round.value)) # Add round parameter
+
+    return render_template("enter_times.html", error_message=error_message, race=race, heat=heat, NUM_LANES=NUM_LANES)
+
+def check_races_complete(patrol, round):
+    filtered_races = [r for r in races if r.patrol == patrol and r.round == round]
+    filtered_heats = [h for r in filtered_races for h in r.heats]
+    total_assigned_lanes = len([l for h in filtered_heats for l in h.lanes if h.lanes[l] is not None])
+    total_times = len([t for h in filtered_heats for t in h.times if h.times[t] is not None])
+
+    return total_assigned_lanes == total_times if total_assigned_lanes > 0 else None
+
+def check_races_scheduled(patrol, round):
+    filtered_races = [r for r in races if r.patrol == patrol and r.round == round]
+    filtered_heats = [h for r in filtered_races for h in r.heats]
+    total_assigned_lanes = len([l for h in filtered_heats for l in h.lanes if h.lanes[l] is not None])
+
+    return total_assigned_lanes > 0
+
+def check_round_complete(round):
+    global initial_races_completed, semi_final_races_completed
+    for p in patrol_names:
+        if p == "Exhibition":
+            semi_final_races_completed[p] = True
+        else:
+            complete = check_races_complete(p, round)
+            if complete is not None:
+                if round == Rounds.FIRST:
+                    initial_races_completed[p] = complete
+                elif round == Rounds.SEMI:
+                    semi_final_races_completed[p] = complete
 
 @app.route("/schedule_initial")
 def schedule_initial():
@@ -555,24 +621,14 @@ def schedule_initial():
     save_data() # Saving data after scheduling initial round
     return redirect(url_for("schedule", round=Rounds.FIRST.value)) # Redirect to the main schedule page
 
-@app.route("/complete_initial/<patrol>")
-def complete_initial(patrol):
-    initial_races_completed[patrol] = True
-    return redirect(url_for("schedule", round=Rounds.FIRST.value)) # Add round parameter
-
 @app.route("/schedule_semifinal/<patrol>")
 def schedule_semifinal(patrol):
     schedule_semi_final_races(patrol)
     save_data() # Saving data after scheduling semi-final round
     return redirect(url_for("schedule", round=Rounds.SEMI.value)) # Add round parameter
 
-@app.route("/complete_semifinal/<patrol>") # New route to mark semi-final races as completed
-def complete_semifinal(patrol):
-    semi_final_races_completed[patrol] = True
-    return redirect(url_for("schedule", round=Rounds.SEMI.value)) # Add round parameter
-
-@app.route("/schedule_final/<patrol>")
-def schedule_final(patrol):
+@app.route("/schedule_final")
+def schedule_final():
     schedule_final_races()
     save_data() # Saving data after scheduling final round
     return redirect(url_for("schedule", round=Rounds.FINAL.value)) # Add round parameter
@@ -585,6 +641,8 @@ def schedule():
         selected_round = Rounds(int(selected_round_str))  # Convert to Rounds enum
     except ValueError:
         selected_round = Rounds.FIRST  # Default to first round if invalid round value
+    if selected_round == Rounds.FINAL:
+        selected_patrol = ""
 
     selected_round_name = ""
     if selected_round == Rounds.FIRST:
@@ -594,12 +652,16 @@ def schedule():
     elif selected_round == Rounds.FINAL:
         selected_round_name = "Finals"
 
+    check_round_complete(Rounds.FIRST)
+    check_round_complete(Rounds.SEMI)
+
     top_racers, overall_racer_averages = get_top_racers(selected_round, selected_patrol, NUM_LANES)
 
     if semi_final_races_completed:
-        all_semi_final_races_complete = all(semi_final_races_completed.values())
+        all_semi_final_races_completed = all([v for k,v in semi_final_races_completed.items() if k != "Exhibition"])
     else:
-        all_semi_final_races_complete = False
+        all_semi_final_races_completed = False
+    semi_final_races_scheduled = {p: check_races_scheduled(p, Rounds.SEMI) for p in patrol_names}
 
     return render_template("schedule.html", races=races, patrol_names=patrol_names,
                            selected_patrol=selected_patrol, 
@@ -611,7 +673,8 @@ def schedule():
                            overall_racer_averages=overall_racer_averages,
                            initial_races_completed=initial_races_completed,
                            semi_final_races_completed=semi_final_races_completed,
-                           all_semi_final_races_complete=all_semi_final_races_complete )
+                           all_semi_final_races_completed=all_semi_final_races_completed,
+                           semi_final_races_scheduled=semi_final_races_scheduled )
 
 def calculate_race_averages(race):
     racer_race_times = {}  # Store total times for racers in the race
@@ -662,6 +725,7 @@ def judge_design():
 
     role = session.get('role', Role.PUBLIC.name)
     judge_name = session.get('judge_name', None)
+    judge_id = judges[judge_name]['id'] if judge_name else None
     error_message = ""
 
     racers = {}
@@ -675,28 +739,29 @@ def judge_design():
         error_message = "This page is only for authorized Judges, please log in."
 
     if not error_message and request.method == "POST":
-        judge_id = judges[judge_name]['id']
 
         for p in participants:
             rank = request.form.get(f"rank_{p.participant_id}", 0)
-            design = next((d for d in designs if d.participant == p), None)
-            if design:
-                design.scores[judge_id] = int(rank)
+            designs[p.participant_id].scores[judge_id] = int(rank)
         save_data()
         return redirect(url_for("design_results"))
 
-    return render_template("judge_design.html", racers=racers, patrol_names=patrol_names, judge_name=judge_name, error_message=error_message)
+    return render_template("judge_design.html", racers=racers, patrol_names=patrol_names,
+                            judge_id=judge_id, designs=designs, judge_name=judge_name, 
+                            judging_active=judging_active, error_message=error_message)
 
 @app.route("/close_judging")
 def close_judging():
     global judging_active
     judging_active = False
+    save_data()
     return redirect(url_for("design_results"))
 
 @app.route("/open_judging")
 def open_judging():
     global judging_active
     judging_active = True
+    save_data()
     return redirect(url_for("design_results"))
 
 
@@ -727,11 +792,7 @@ def design_results():
         patrol_scores = []
         for p in participants:
             if p.patrol == patrol:
-                design = next((d for d in designs if d.participant == p), None)
-                if design:
-                    design_score = score_design(design)
-                else:
-                    design_score = (0,0,0,0)
+                design_score = score_design(designs[p.participant_id])
                 patrol_scores.append((p, design_score[0], design_score[1],
                                       design_score[2], design_score[3]))
 
@@ -773,9 +834,9 @@ def download_results():
     )
 
 
-@app.route("/download_racer_data/<int:participant_id>")
+@app.route("/download_racer_data/<participant_id>")
 def download_racer_data(participant_id):
-    participant = next((p for p in participants if p.car_number == participant_id), None)
+    participant = next((p for p in participants if p.participant_id == participant_id), None)
     if not participant:
         return "Participant not found", 404
 
@@ -797,34 +858,40 @@ def download_racer_data(participant_id):
 
 @app.route("/upload_roster", methods=["GET", "POST"])
 def upload_roster():
-    if request.method == "POST":
-        if 'file' not in request.files:
-            flash('No file part')
-            return redirect(request.url)
-        file = request.files['file']
-        if file.filename == '':
-            flash('No selected file')
-            return redirect(request.url)
+    role = session.get('role', Role.PUBLIC.name)
+    error_message = ""
 
-        if file and (file.filename.endswith('.csv') or file.filename.endswith(".txt")): # Check file extension
-            try:
-                # Load from memory
-                csv_file = file.stream.read().decode('utf-8')
-                load_roster_from_memory(csv_file) # See function below
-                save_data() # Save data after loading roster
-                flash('Roster uploaded successfully!')
-                return redirect(url_for('index')) # Redirect to your main page
+    if Role[role] == Role.OWNER:
+        if request.method == "POST":
+            if 'file' not in request.files:
+                flash('Must provide file part')
+                return redirect(request.url)
+            file = request.files['file']
+            if file.filename == '':
+                flash('Must provide file')
+                return redirect(request.url)
 
-            except Exception as e:
-                flash(f'Error uploading roster: {str(e)}') # Display error message
-                traceback.print_exc()
+            if file and (file.filename.endswith('.csv') or file.filename.endswith(".txt")): # Check file extension
+                try:
+                    # Load from memory
+                    csv_file = file.stream.read().decode('utf-8')
+                    load_roster_from_memory(csv_file) # See function below
+                    save_data() # Save data after loading roster
+                    flash('Roster uploaded successfully!')
+                    return redirect(url_for('index')) # Redirect to your main page
 
-        else:
-            flash('Invalid file type. Please upload a CSV file.')
+                except Exception as e:
+                    flash(f'Error uploading roster: {str(e)}') # Display error message
+                    traceback.print_exc()
 
-        return redirect(request.url) # Redirect back to the upload page
+            else:
+                flash('Invalid file type. Please upload a CSV file.')
 
-    return render_template("upload_roster.html")
+            return redirect(request.url) # Redirect back to the upload page
+    else:
+        error_message="Only the owner can upload racer data."
+
+    return render_template("upload_roster.html", error_message="")
 
 def load_roster_from_memory(csv_string):
     csvfile = StringIO(csv_string)
@@ -842,6 +909,8 @@ def download_roster_template():
     output = StringIO()
     writer = csv.writer(output)
     writer.writerow(["First Name", "Last Name", "Patrol", "car_weight_oz"]) # Header row
+    for p in participants:
+        writer.writerow([p.first_name, p.last_name, patrol_names[p.patrol], p.car_weight_oz])
     return Response(
         output.getvalue(),
         mimetype="text/csv",
@@ -862,7 +931,7 @@ def api_races():
 
 @app.route("/api/designs")
 def api_designs():
-    return jsonify([d.toJSON() for d in designs])
+    return jsonify({p: d.toJSON() for p, d in designs.items()})
 
 @app.errorhandler(404)
 def page_not_found(e):

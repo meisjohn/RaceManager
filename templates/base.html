@@ -2,134 +2,12 @@
 <html>
 <head>
     <title>Pinecar Race Manager</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            background-color: #f0f0f0;
-            color: #333;
-            margin: 20px;
-        }
-
-        h1, h2 {
-            color: #0052A5;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        th, td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-
-        th, button {
-            background-color: #0052A5;
-            color: white;
-        }
-
-        tr:hover {
-                background-color: #e0e0e0;
-            }
-
-        button.big {
-                padding: 10px 15px;
-                border-radius: 3px;
-                cursor: pointer;
-            font-size: larger;
-        }
-
-        input[type="text"],
-        input[type="number"],
-        select { /* Added select for the dropdown */
-            padding: 5px;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-        }
-
-        input[type="submit"], button.medium {
-            background-color: #0052A5;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-
-        input[type="submit"]:hover {
-            background-color: #004080;
-        }
-
-        a {
-            color: #0052A5;
-            text-decoration: none;
-        }
-
-        a:hover {
-            text-decoration: underline;
-        }
-
-        .container {
-            max-width: 960px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: white;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            border-radius: 5px;
-        }
-        .container img {
-            object-fit: contain;
-        }
-
-         nav {
-            background-color: #0052A5; /* Trail Life blue */
-            padding: 10px;
-            border-radius: 5px 5px 0 0; /* Rounded corners on top */
-        }
-
-        nav ul {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-            display: flex;  /* Use flexbox for horizontal menu */
-            justify-content: space-around; /* Distribute links evenly */
-        }
-
-        nav li {
-            margin: 0 10px; /* Add spacing between list items */
-        }
-
-        nav a {
-            color: white;
-            text-decoration: none;
-            padding: 5px 10px; /* Add padding around link text */
-            border-radius: 3px; /* Add rounded corners to links */
-        }
-
-        nav a:hover {
-            background-color: #004080; /* Darker blue on hover */
-        }
-
-        .container {
-           /* ... (same as before) */
-           margin-top: 20px; /* Add top margin to separate from nav */
-        }
-        .error-message {
-            background-color: #ffe6e6;
-            border: 2px solid #800000;
-            color: #800000;
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 5px;
-            font-weight: bold;
-            text-align: center;
-        }
-
-    </style>
-    <script>  function confirmAction(message, url) {
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bulma.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    <script>
+        function confirmAction(message, url) {
             if (confirm(message)) {
                 window.location.href = url;
             }
@@ -137,22 +15,66 @@
     </script>
 </head>
 <body>
-    <nav>
-        <ul>
-            <li><a href="/">Participants</a></li>
-            <li><a href="/schedule">Race Schedule</a></li>
-            <li><a href="/display_results">Race Results</a></li>
-            <li><a href="/design_results">Design Results</a></li>
-            {% if session['role'] %}
-            <li><a href="/login">{{ session['role']|title }}: Manage Role</a></li>
-            {% else %}
-            <li><a href="/login">Login</a></li>
-            {% endif %}
-        </ul>
-    </nav>
+
     <div class="container">
-        {% block content %} {% endblock %}
+        <div class="columns is-vcentered">
+            <div class="column is-narrow">
+                <figure class="image is-64x64">
+                    <img src="{{ url_for('static', filename='flags.png') }}" alt="Logo">
+                </figure>
+            </div>
+            <div class="column">
+                <h1 class="title">Pinecar Race Manager</h1>
+            </div>
+        </div>
     </div>
+
+    <nav class="navbar is-primary" role="navigation" aria-label="main navigation">
+        <div class="navbar-brand">
+            <a class="navbar-item" href="/">
+                </a>
+
+            <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarBasicExample">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+            </a>
+        </div>
+
+        <div id="navbarBasicExample" class="navbar-menu">
+            <div class="navbar-start">
+                <a class="navbar-item has-text-white has-text-weight-bold" href="/">Participants</a>
+                <a class="navbar-item has-text-white has-text-weight-bold" href="/schedule">Race Schedule</a>
+                <a class="navbar-item has-text-white has-text-weight-bold" href="/display_results">Race Results</a>
+                <a class="navbar-item has-text-white has-text-weight-bold" href="/design_results">Design Results</a>
+                {% if session['role'] %}
+                    <a class="navbar-item has-text-white has-text-weight-bold" href="/login">{{ session['role']|title }}: Manage Role</a>
+                {% else %}
+                    <a class="navbar-item has-text-white has-text-weight-bold" href="/login">Login</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="box">
+        {% block content %} {% endblock %}
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const $navbarBurgers = Array.prototype.slice.call(document.querySelectorAll('.navbar-burger'), 0);
+            $navbarBurgers.forEach(el => {
+                el.addEventListener('click', () => {
+                    const target = el.dataset.target;
+                    const $target = document.getElementById(target);
+                    el.classList.toggle('is-active');
+                    $target.classList.toggle('is-active');
+                });
+            });
+        });
+    </script>
 </body>
 </html>
-

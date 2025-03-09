@@ -1,28 +1,35 @@
 {% extends "base.html" %}
 {% block content %}
-    <h1>Race Times for {{ participant.first_name }} {{ participant.last_name }} ({{ patrol_names.get(participant.patrol) }})</h1>
+    <section class="section">
+        <div class="container">
+            <h1 class="title">Race Times for {{ participant.first_name }} {{ participant.last_name }} ({{ patrol_names.get(participant.patrol) }})</h1>
 
-    {% if participant.times %}
-        <table>
-            <thead>
-                <tr>
-                    <th>Race</th>
-                    <th>Time</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for i, time in enumerate(participant.times) %}
-                    <tr>
-                        <td>{{ i + 1 }}</td>  <td>{{ time }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p>No race times recorded yet for this participant.</p>
-    {% endif %}
+            {% if participant.times %}
+                <div class="table-container">
+                    <table class="table is-bordered is-striped is-fullwidth">
+                        <thead>
+                            <tr>
+                                <th>Race</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for time in participant.times %}
+                                 <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{ "{:.3f}".format(time|round(3,'ceil')) }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p>No race times recorded yet for this participant.</p>
+            {% endif %}
 
-    <a href="/download_racer_data/{{ participant.car_number }}">Download Data</a>
-    <br>
-    <a href="{{ url_for('index') }}">Back to Participant List</a>
+            <a href="{{ url_for('download_racer_data', participant_id=participant.participant_id ) }}" class="button is-link">Download Data</a>
+            <br>
+            <a href="{{ url_for('index') }}" class="button">Back to Participant List</a>
+        </div>
+    </section>
 {% endblock %}

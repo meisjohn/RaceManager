@@ -1,0 +1,23 @@
+/*! bulma.io v1.0.2 | MIT License | github.com/jgthms/bulma */
+@use "sass";
+:root {
+  --bulma-primary-h: 211deg;
+  --bulma-primary-s: 94%;
+  --bulma-primary-l: 47%;
+  /* --bulma-body-background-color: #f0f0f0; */
+  --bulma-burger-h: 126deg;
+  /* --bulma-burger-l: 85%; */
+  /* --bulma-body-color: #333; */
+
+} 
+
+.box {
+  --bulma-box-shadow: 0 0.5em 1em -0.125em hsla(221deg, 25%,4%,0.1),0 0px 0 1px hsla(221deg,14%,4%,0.02);
+}
+
+/* .container {
+  margin: 20px auto;
+  padding: 20px;
+  background-color: #fff;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  border-radius: 5px; } */
