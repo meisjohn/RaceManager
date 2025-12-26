@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+    <section class="section">
+        <div class="container">
+            <h1 class="title">Race Results</h1>
+            <div class="table-container">
+                <table class="table is-bordered is-striped is-fullwidth is-hoverable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Patrol</th>
+                            <th class="has-text-centered">Car Name</th>
+                            <th class="has-text-centered">Average Time</th>
+                            <th class="has-text-centered">Best Time</th>
+                            <th class="has-text-centered">Best Time Race #</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in participants %}
+                            <tr>
+                                <td>{{ p.first_name }} {{ p.last_name }}</td>
+                                <td>{{ patrol_names.get(p.patrol) }}</td>
+                                <td class="has-text-centered">{{ p.car_name }}</td>
+                                <td class="has-text-centered">{{ "{:.3f}".format(p.average_time|round(3,'ceil')) }}</td>
+                                <td class="has-text-centered">{{ "{:.3f}".format(p.best_time|round(3,'ceil')) }}</td>
+                                <td class="has-text-centered">{{ p.best_time_race_number }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <br>
+            <div class="has-text-centered">
+                <a href="/download_results" class="button is-large is-primary">Download Results</a>
+            </div>
+        </div>
+    </section>
+{% endblock %}

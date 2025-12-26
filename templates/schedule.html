@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block content %}
+    <section class="section">
+        <div class="container">
+            <h1 class="title">Race Schedule - Round {{ selected_round_name }}</h1>
+
+            <form id="filterForm" method="GET" class="mb-4">
+                <div class="field is-horizontal">
+                    <div class="field-label is-normal">
+                        <label class="label">Patrol:</label>
+                    </div>
+                    <div class="field-body">
+                        <div class="field">
+                            <div class="control">
+                                <div class="select">
+                                    <select name="patrol" onchange="this.form.submit()">
+                                        <option value="">All</option>
+                                        {% for id, name in patrol_names.items() %}
+                                            <option value="{{ id }}" {% if selected_patrol == id %}selected{% endif %}>{{ name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="field is-horizontal">
+                    <div class="field-label is-normal">
+                        <label class="label">Round:</label>
+                    </div>
+                    <div class="field-body">
+                        <div class="field">
+                            <div class="control">
+                                <div class="select">
+                                    <select name="round" onchange="this.form.submit()">
+                                        <option value="{{ Rounds.FIRST.value }}" {% if selected_round_value == Rounds.FIRST.value %}selected{% endif %}>First Round</option>
+                                        <option value="{{ Rounds.SEMI.value }}" {% if selected_round_value == Rounds.SEMI.value %}selected{% endif %}>Semi-Finals</option>
+                                        <option value="{{ Rounds.FINAL.value }}" {% if selected_round_value == Rounds.FINAL.value %}selected{% endif %}>Finals</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            {% if (selected_patrol|length == 0 and races|length > 0 ) or ( selected_patrol|length > 0 and races|selectattr("patrol", "eq", selected_patrol)|list|length > 0 ) %}
+                <div class="table-container">
+                    <table class="table is-bordered is-striped is-fullwidth is-hoverable">
+                        <thead>
+                            <tr>
+                                <th class="has-text-centered">Race #</th>
+                                <th class="has-text-centered">Patrol</th>
+                                <th class="has-text-centered">Heat</th>
+                                {% for lane in range(1, NUM_LANES + 1) %}
+                                    <th class="has-text-centered">Lane {{ lane }}</th>
+                                {% endfor %}
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for race in races %}
+                                {% if (selected_patrol == "" or race.patrol == selected_patrol) and race.round == selected_round %}
+                                    {% for heat in race.heats %}
+                                        <tr>
+                                            <td class="has-text-centered">{{ race.race_number }}</td>
+                                            <td class="has-text-centered">{{ patrol_names.get(race.patrol) }}</td>
+                                            <td class="has-text-centered">{{ heat.heat_number }}</td>
+                                            {% for lane in range(1, NUM_LANES + 1) %}
+                                                <td class="has-text-centered">
+                                                    {% if heat.lanes.get(lane) %}
+                                                        <strong>{{ heat.lanes.get(lane).car_name }}</strong><br>
+                                                        {{ heat.lanes.get(lane).first_name }} {{ heat.lanes.get(lane).last_name }}<br>
+                                                        {% if heat.times.get(lane) %}
+                                                            <div style="font-size: larger; font-style: italic;">{{ "{:.3f}".format(heat.times.get(lane)) }}</div><br>
+                                                        {% endif %}
+                                                    {% endif %}
+                                                </td>
+                                            {% endfor %}
+                                            <td>
+                                                {% if session['role'] == "OWNER" %}
+                                                    <a href="/enter_times/{{ race.race_number }}/{{ heat.heat_number }}" class="button is-small is-link">Enter Times</a>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <br>
+                <div class="has-text-centered">
+                    {% if session['role'] == "OWNER" %}
+                        {% if selected_round == Rounds.FIRST %}
+                            {% for id, name in patrol_names.items() %}
+                                {% if initial_races_completed.get(id, False) and (not semi_final_races_scheduled.get(id, False)) and id != "Exhibition" and (id == selected_patrol or selected_patrol|length == 0) and races|selectattr("patrol", "eq", id)|list|length > 0 %}
+                                    <a href="javascript:confirmAction('Are you sure you want to schedule semi-finals for {{ name }}?', '/schedule_semifinal/{{ id }}')" class="button is-large is-primary mb-2">Schedule Semi-Finals for {{ name }}</a><br>
+                                {% endif %}
+                            {% endfor %}
+                        {% elif selected_round == Rounds.SEMI %}
+                            {% if all_semi_final_races_completed %}
+                                <a href="javascript:confirmAction('Are you sure you want to schedule the finals?', '/schedule_final')" class="button is-large is-primary mb-2">Schedule Finals</a><br>
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+                </div>
+                <br>
+                {% if selected_round == Rounds.FIRST %}
+                    <h2 class="subtitle">Top Racers for Round 1</h2>
+                    <div class="table-container">
+                        <table class="table is-bordered is-striped is-fullwidth">
+                            <thead>
+                                <tr>
+                                    <th class="has-text-centered">Rank</th>
+                                    <th>Name</th>
+                                    <th>Patrol</th>
+                                    <th class="has-text-centered">Average Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for i, racer in top_racers %}
+                                    <tr>
+                                        <td class="has-text-centered">{{ i + 1 }}</td>
+                                        <td><strong>{{ racer.car_name }}</strong> {{ racer.first_name }} {{ racer.last_name }}</td>
+                                        <td>{{ patrol_names.get(racer.patrol) }}</td>
+                                        <td class="has-text-centered">{{ "{:.3f}".format(overall_racer_averages.get(racer)|round(3, 'ceil')) }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="has-text-centered">
+                    <h2 class="subtitle">No races scheduled
+                        {% if selected_patrol in patrol_names %}
+                            for {{ patrol_names[selected_patrol] }}
+                        {% endif %}
+                    </h2>
+                </div>
+            {% endif %}
+        </div>
+    </section>
+{% endblock %}

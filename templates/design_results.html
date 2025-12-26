@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+    <section class="section">
+        <div class="container">
+            <h1 class="title">Car Design Judging Results</h1>
+
+            {% if error_message %}
+                <p class="notification is-danger">{{ error_message }}</p>
+            {% endif %}
+
+            {% if not judging_active %}
+                <div class="table-container">
+                    <table class="table is-bordered is-striped">
+                        <thead>
+                            <tr>
+                                <th >Car</th>
+                                <th class=" has-text-centered">Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for patrol_id, patrol_name in patrol_names.items() %}
+                                <tr><th class="has-text-weight-bold has-text-centered is-inverted" colspan="2">{{patrol_name}}</th></tr>
+                                {% for s in sorted_scores_by_patrol[patrol_id] %}
+                                    <tr>
+                                        <td><strong>{{ s[0].car_name }}</strong> {{ s[0].first_name }} {{ s[0].last_name }}</td>
+                                        <td class="has-text-centered">{{ s[1] }}</td>
+                                    </tr>
+                                {% endfor %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                 </div>
+                <br>
+                {% if session['role'] == "OWNER" %}
+                    <a href="/open_judging" class="button is-primary">Open Judging Period</a>
+                {% endif %}
+            {% else %}
+                <div class="has-text-centered">
+                    <h2 class="subtitle">Scores will be available at the end of judging</h2>
+                </div>
+                <br>
+                {% if session['role'] == "OWNER" %}
+                    <a href="/close_judging" class="button is-primary">Close Judging Period</a>
+                {% elif session['role'] == "JUDGE" %}
+                    <a href="/judge_design" class="button is-primary">Go to Judging Forms</a>
+                    <a href="/logout" class="button is-warning">Logout</a>
+    
+                {% endif %}
+            {% endif %}
+        </div>
+    </section>
+{% endblock %}
