@@ -1,0 +1,1742 @@
+{
+    "participants": [
+        {
+            "first_name": "Caleb",
+            "last_name": "Collins",
+            "patrol": "1",
+            "car_weight_oz": 5.04,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "F1",
+            "car_number": 1,
+            "participant_id": "1fd2bc5d2cb540eb856abe55c3e4f95e"
+        },
+        {
+            "first_name": "Asher",
+            "last_name": "Snyder",
+            "patrol": "1",
+            "car_weight_oz": 4.95,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "F2",
+            "car_number": 2,
+            "participant_id": "8494deba225c4dda8cc38761ec1b8d45"
+        },
+        {
+            "first_name": "Levi",
+            "last_name": "Bowers",
+            "patrol": "1",
+            "car_weight_oz": 4.06,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "F3",
+            "car_number": 3,
+            "participant_id": "7890a6f5640647feb87cca5ccdd91075"
+        },
+        {
+            "first_name": "James",
+            "last_name": "Hall-Johnkins",
+            "patrol": "1",
+            "car_weight_oz": 5.05,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "F4",
+            "car_number": 4,
+            "participant_id": "a42018325d77470ebab16f9601864b75"
+        },
+        {
+            "first_name": "Noah",
+            "last_name": "Nielsen",
+            "patrol": "1",
+            "car_weight_oz": 5.04,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "F5",
+            "car_number": 5,
+            "participant_id": "5b76ac422fd14a2786fed2a480f878c4"
+        },
+        {
+            "first_name": "Thomas",
+            "last_name": "Graham",
+            "patrol": "1",
+            "car_weight_oz": 5.02,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "F6",
+            "car_number": 6,
+            "participant_id": "3a48adaa2d14436080c26d32c298692c"
+        },
+        {
+            "first_name": "Cameron",
+            "last_name": "Fetter",
+            "patrol": "1",
+            "car_weight_oz": 4.9,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "F7",
+            "car_number": 7,
+            "participant_id": "121463d8c43340fc9ea5a264491300c9"
+        },
+        {
+            "first_name": "Joey",
+            "last_name": "Howard",
+            "patrol": "1",
+            "car_weight_oz": 3.85,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "F8",
+            "car_number": 8,
+            "participant_id": "8c1892ae186a433c8af8d6ee59d26bd0"
+        },
+        {
+            "first_name": "Elijah",
+            "last_name": "O'Connell",
+            "patrol": "1",
+            "car_weight_oz": 4.85,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "F9",
+            "car_number": 9,
+            "participant_id": "e07f066b4f49485588a17ca85963495b"
+        },
+        {
+            "first_name": "Calvin",
+            "last_name": "Wiley",
+            "patrol": "1",
+            "car_weight_oz": 5.0,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "F10",
+            "car_number": 10,
+            "participant_id": "a43f2d8960694e16b0c2130f4e1c75fc"
+        },
+        {
+            "first_name": "Austin",
+            "last_name": "Miller",
+            "patrol": "1",
+            "car_weight_oz": 2.05,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "F11",
+            "car_number": 11,
+            "participant_id": "a9128d37f9e84b628005c334d5f0aaa7"
+        },
+        {
+            "first_name": "Ollie",
+            "last_name": "Steininger",
+            "patrol": "1",
+            "car_weight_oz": 5.05,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "F12",
+            "car_number": 12,
+            "participant_id": "bc746c3d45ae46c3ab688c9c62b4c97d"
+        },
+        {
+            "first_name": "Gabe",
+            "last_name": "Smith",
+            "patrol": "1",
+            "car_weight_oz": 4.91,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "F13",
+            "car_number": 13,
+            "participant_id": "7e0ce9c3de704cf2929bacad0333bc9c"
+        },
+        {
+            "first_name": "Mateo",
+            "last_name": "Tarallo",
+            "patrol": "1",
+            "car_weight_oz": 5.05,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "F14",
+            "car_number": 14,
+            "participant_id": "ca6dddae0d624294865aa785b00989fb"
+        },
+        {
+            "first_name": "Freddy",
+            "last_name": "Semler",
+            "patrol": "1",
+            "car_weight_oz": 5.03,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "F15",
+            "car_number": 15,
+            "participant_id": "6dd479219a3e40b9b9924411f0afd2f8"
+        },
+        {
+            "first_name": "Levi",
+            "last_name": "Pultro",
+            "patrol": "1",
+            "car_weight_oz": 4.9,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "F16",
+            "car_number": 16,
+            "participant_id": "5366f544e94c4ea0a18fc2f8a01ab86b"
+        },
+        {
+            "first_name": "Zion",
+            "last_name": "Khan",
+            "patrol": "1",
+            "car_weight_oz": 5.0,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "F17",
+            "car_number": 17,
+            "participant_id": "ab0b6264a5e54289ad11a42de3e605ba"
+        },
+        {
+            "first_name": "Zachary",
+            "last_name": "McGonigal",
+            "patrol": "1",
+            "car_weight_oz": 4.93,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "F18",
+            "car_number": 18,
+            "participant_id": "929a1583b0294aba8057d2eae7cbdf74"
+        },
+        {
+            "first_name": "Eli",
+            "last_name": "Faehl",
+            "patrol": "1",
+            "car_weight_oz": 5.0,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "F19",
+            "car_number": 19,
+            "participant_id": "1198f78ad0154766b409a9fac20e9417"
+        },
+        {
+            "first_name": "Oliver",
+            "last_name": "Straffe",
+            "patrol": "1",
+            "car_weight_oz": 4.99,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "F20",
+            "car_number": 20,
+            "participant_id": "c50d0209cddc44d1aaf64594d93875fc"
+        },
+        {
+            "first_name": "Luther",
+            "last_name": "Branine",
+            "patrol": "1",
+            "car_weight_oz": 4.96,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "F21",
+            "car_number": 21,
+            "participant_id": "4de98cd9c8f7413ab8c1be9dc9814535"
+        },
+        {
+            "first_name": "Josiah",
+            "last_name": "Saimesier",
+            "patrol": "2",
+            "car_weight_oz": 2.77,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "H1",
+            "car_number": 1,
+            "participant_id": "e739e0444e91490ba9a1142e2e74fa2b"
+        },
+        {
+            "first_name": "Colton",
+            "last_name": "Snyder",
+            "patrol": "2",
+            "car_weight_oz": 4.92,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "H2",
+            "car_number": 2,
+            "participant_id": "8da5496b4dc246ad88be503e8e00a3c9"
+        },
+        {
+            "first_name": "Ethan",
+            "last_name": "Hivner",
+            "patrol": "2",
+            "car_weight_oz": 4.8,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "H3",
+            "car_number": 3,
+            "participant_id": "98cabdbf5ee0415f9a6009119d7d60a4"
+        },
+        {
+            "first_name": "Ryder",
+            "last_name": "Bowers",
+            "patrol": "2",
+            "car_weight_oz": 4.66,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "H4",
+            "car_number": 4,
+            "participant_id": "391e33f95a2542aea58589d258f0aef1"
+        },
+        {
+            "first_name": "Weston",
+            "last_name": "Fetters",
+            "patrol": "2",
+            "car_weight_oz": 4.99,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "H5",
+            "car_number": 5,
+            "participant_id": "914911509ac140f7ab913bc885e42a81"
+        },
+        {
+            "first_name": "Beckham",
+            "last_name": "Hansen",
+            "patrol": "2",
+            "car_weight_oz": 4.87,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "H6",
+            "car_number": 6,
+            "participant_id": "202359635180427095df35830eccdec3"
+        },
+        {
+            "first_name": "Timothy",
+            "last_name": "Richardson",
+            "patrol": "2",
+            "car_weight_oz": 4.94,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "H7",
+            "car_number": 7,
+            "participant_id": "e580c250e27542a5a4a07a4b9caf0c42"
+        },
+        {
+            "first_name": "Jonathan",
+            "last_name": "Gill",
+            "patrol": "2",
+            "car_weight_oz": 5.03,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "H8",
+            "car_number": 8,
+            "participant_id": "a86dcc3de4c0428199dd39ba92fab2e7"
+        },
+        {
+            "first_name": "Maclan",
+            "last_name": "Crain",
+            "patrol": "2",
+            "car_weight_oz": 5.08,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "H9",
+            "car_number": 9,
+            "participant_id": "93fe287592a34376a6e75fddafea9bb6"
+        },
+        {
+            "first_name": "Eli",
+            "last_name": "Korchuk",
+            "patrol": "2",
+            "car_weight_oz": 4.72,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "H10",
+            "car_number": 10,
+            "participant_id": "82f9ef566f7449fda869615d7c5ccf79"
+        },
+        {
+            "first_name": "Ben",
+            "last_name": "Steininger",
+            "patrol": "2",
+            "car_weight_oz": 5.05,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "H11",
+            "car_number": 11,
+            "participant_id": "64d78172c71e483e8ecaeaf9141ee1df"
+        },
+        {
+            "first_name": "Victor",
+            "last_name": "Oliveras",
+            "patrol": "2",
+            "car_weight_oz": 3.55,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "H12",
+            "car_number": 12,
+            "participant_id": "30211db5bac54908bda78997da4745ab"
+        },
+        {
+            "first_name": "Benny",
+            "last_name": "Vanzino",
+            "patrol": "2",
+            "car_weight_oz": 4.95,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "H13",
+            "car_number": 13,
+            "participant_id": "893c9028deb94862a1924b1b7616ea16"
+        },
+        {
+            "first_name": "Christiano",
+            "last_name": "Tarallo",
+            "patrol": "2",
+            "car_weight_oz": 5.1,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "H14",
+            "car_number": 14,
+            "participant_id": "331b6b0524b7434086d020a1ca113845"
+        },
+        {
+            "first_name": "Carson",
+            "last_name": "McGonigal",
+            "patrol": "2",
+            "car_weight_oz": 4.96,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "H15",
+            "car_number": 15,
+            "participant_id": "f1cd3a2655394b59b8abfb6eb52ad51d"
+        },
+        {
+            "first_name": "AJ",
+            "last_name": "Ervin",
+            "patrol": "2",
+            "car_weight_oz": 4.96,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "H16",
+            "car_number": 16,
+            "participant_id": "7ff4324b63834990b6aab5442a47ffd1"
+        },
+        {
+            "first_name": "James",
+            "last_name": "Booth",
+            "patrol": "2",
+            "car_weight_oz": 5.06,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "H17",
+            "car_number": 17,
+            "participant_id": "8e9dc375326b4d14aa7fffcd6bf17955"
+        },
+        {
+            "first_name": "Austin",
+            "last_name": "Demari",
+            "patrol": "2",
+            "car_weight_oz": 5.0,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "H18",
+            "car_number": 18,
+            "participant_id": "be1275cdbadc450794f03ac8a3d15d6e"
+        },
+        {
+            "first_name": "Phi",
+            "last_name": "Dexter",
+            "patrol": "2",
+            "car_weight_oz": 4.81,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "H19",
+            "car_number": 19,
+            "participant_id": "ae69faa3858142e2a523de52bf7b1e84"
+        },
+        {
+            "first_name": "Gordon",
+            "last_name": "Kent",
+            "patrol": "2",
+            "car_weight_oz": 5.01,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "H20",
+            "car_number": 20,
+            "participant_id": "7feb0b27283f4438a7f5e4c9054f292d"
+        },
+        {
+            "first_name": "Christian",
+            "last_name": "Laubscher",
+            "patrol": "2",
+            "car_weight_oz": 4.81,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "H21",
+            "car_number": 21,
+            "participant_id": "89fbc559cb674a33a1506997ec516da3"
+        },
+        {
+            "first_name": "Chi",
+            "last_name": "Murdoch",
+            "patrol": "3",
+            "car_weight_oz": 4.99,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "M1",
+            "car_number": 1,
+            "participant_id": "d35f7daa3dcd4630ad82061384c4115f"
+        },
+        {
+            "first_name": "Luke",
+            "last_name": "Collins",
+            "patrol": "3",
+            "car_weight_oz": 5.01,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "M2",
+            "car_number": 2,
+            "participant_id": "f0ad609675724496a8d8b295034b5abe"
+        },
+        {
+            "first_name": "Mason",
+            "last_name": "Spooner",
+            "patrol": "3",
+            "car_weight_oz": 4.69,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "M3",
+            "car_number": 3,
+            "participant_id": "d53f4e36bd214adbb72bb69b7531f58c"
+        },
+        {
+            "first_name": "Toby",
+            "last_name": "Leininger",
+            "patrol": "3",
+            "car_weight_oz": 5.06,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "M4",
+            "car_number": 4,
+            "participant_id": "c242ab81482a49e79a700962a443145a"
+        },
+        {
+            "first_name": "Christian",
+            "last_name": "Caro",
+            "patrol": "3",
+            "car_weight_oz": 4.89,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "M5",
+            "car_number": 5,
+            "participant_id": "38eb6411b5d64828965ca62352e5fd74"
+        },
+        {
+            "first_name": "Drew",
+            "last_name": "Wood",
+            "patrol": "3",
+            "car_weight_oz": 5.09,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "M6",
+            "car_number": 6,
+            "participant_id": "2e577448edd74552b0423c0c212e56fe"
+        },
+        {
+            "first_name": "Connor",
+            "last_name": "Diamond",
+            "patrol": "3",
+            "car_weight_oz": 4.99,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "M7",
+            "car_number": 7,
+            "participant_id": "872228009675403085c6043ee49891a8"
+        },
+        {
+            "first_name": "Gabriel",
+            "last_name": "Horn",
+            "patrol": "3",
+            "car_weight_oz": 4.8,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "M8",
+            "car_number": 8,
+            "participant_id": "491b8103118a42a6a3f58823101e3932"
+        },
+        {
+            "first_name": "Ethan",
+            "last_name": "Korchuk",
+            "patrol": "3",
+            "car_weight_oz": 4.59,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "M9",
+            "car_number": 9,
+            "participant_id": "8eb50617b4ca4ddfb6c40360d934396f"
+        },
+        {
+            "first_name": "Dawson",
+            "last_name": "Mihos",
+            "patrol": "3",
+            "car_weight_oz": 5.06,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "M10",
+            "car_number": 10,
+            "participant_id": "a1efe393ea504d0587c63a8fd761d8dc"
+        },
+        {
+            "first_name": "Elliott",
+            "last_name": "Steininger",
+            "patrol": "3",
+            "car_weight_oz": 5.05,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "M11",
+            "car_number": 11,
+            "participant_id": "bcd4cabf33794c0f89a74bf9f3069126"
+        },
+        {
+            "first_name": "Noah",
+            "last_name": "Heilman",
+            "patrol": "3",
+            "car_weight_oz": 4.96,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "M12",
+            "car_number": 12,
+            "participant_id": "f291712017754a64b319946d9071377e"
+        },
+        {
+            "first_name": "Luke",
+            "last_name": "Faehl",
+            "patrol": "3",
+            "car_weight_oz": 4.98,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "M13",
+            "car_number": 13,
+            "participant_id": "c112e97ee63a4466a1c83ddfe366e3e4"
+        },
+        {
+            "first_name": "Caiden",
+            "last_name": "Thomas",
+            "patrol": "3",
+            "car_weight_oz": 5.01,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "M14",
+            "car_number": 14,
+            "participant_id": "308dbdddab2f47f1a9ab8d384313f071"
+        },
+        {
+            "first_name": "Judah",
+            "last_name": "Branine",
+            "patrol": "3",
+            "car_weight_oz": 5.1,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "M15",
+            "car_number": 15,
+            "participant_id": "5df5de19a760453ab962a2aa9c25792c"
+        },
+        {
+            "first_name": "Jayden",
+            "last_name": "Wu",
+            "patrol": "3",
+            "car_weight_oz": 2.6,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "M16",
+            "car_number": 16,
+            "participant_id": "8f68f784a7764e7e96ecdde8ac80e18b"
+        },
+        {
+            "first_name": "Benny",
+            "last_name": "Soltau",
+            "patrol": "3",
+            "car_weight_oz": 4.57,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "M17",
+            "car_number": 17,
+            "participant_id": "1f8e9abc3941477a8e883008b2b0dad9"
+        },
+        {
+            "first_name": "Jay",
+            "last_name": "Saimesier",
+            "patrol": "4",
+            "car_weight_oz": 4.68,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "N1",
+            "car_number": 1,
+            "participant_id": "38f3e92a51684bacb99fe3ccf73ae354"
+        },
+        {
+            "first_name": "Micah",
+            "last_name": "Richter",
+            "patrol": "4",
+            "car_weight_oz": 5.04,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "N2",
+            "car_number": 2,
+            "participant_id": "15d9cd7eb90b44528322cf7c922a836b"
+        },
+        {
+            "first_name": "Jayden",
+            "last_name": "Bowers",
+            "patrol": "4",
+            "car_weight_oz": 4.6,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "N3",
+            "car_number": 3,
+            "participant_id": "4357a43af7624cc6b687051d0ace0c54"
+        },
+        {
+            "first_name": "Hunter",
+            "last_name": "Mihos",
+            "patrol": "4",
+            "car_weight_oz": 5.09,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "N4",
+            "car_number": 4,
+            "participant_id": "be109a53ccee431195819ec2a8fff4ad"
+        },
+        {
+            "first_name": "Noah",
+            "last_name": "Smith",
+            "patrol": "4",
+            "car_weight_oz": 5.07,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "N5",
+            "car_number": 5,
+            "participant_id": "b063dfddb1e54652a0c53760ecc467f4"
+        },
+        {
+            "first_name": "Adam",
+            "last_name": "Jenchowski",
+            "patrol": "4",
+            "car_weight_oz": 5.04,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "N6",
+            "car_number": 6,
+            "participant_id": "c8a7b0031cc64b1880a50bd38f8c3f36"
+        },
+        {
+            "first_name": "Teddy",
+            "last_name": "Semler",
+            "patrol": "4",
+            "car_weight_oz": 5.02,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "N7",
+            "car_number": 7,
+            "participant_id": "c243865d0e094bbe859c01a91a3d5045"
+        },
+        {
+            "first_name": "Nate",
+            "last_name": "Semler",
+            "patrol": "4",
+            "car_weight_oz": 5.01,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "N8",
+            "car_number": 8,
+            "participant_id": "6547eab0c7b94b29b257502339d6a5aa"
+        },
+        {
+            "first_name": "Christian",
+            "last_name": "Straffe",
+            "patrol": "4",
+            "car_weight_oz": 4.96,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "N9",
+            "car_number": 9,
+            "participant_id": "3467aeaf183b4c5a92e4c22ffe40e776"
+        },
+        {
+            "first_name": "Kenny",
+            "last_name": "Hermann",
+            "patrol": "4",
+            "car_weight_oz": 4.29,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "N10",
+            "car_number": 10,
+            "participant_id": "f78a1352fa61403ea652a3999a1e0f2d"
+        },
+        {
+            "first_name": "Joey",
+            "last_name": "Joyner",
+            "patrol": "4",
+            "car_weight_oz": 5.03,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "N11",
+            "car_number": 11,
+            "participant_id": "18f9ca08e3f74d09bfe8a7a20595c0d3"
+        },
+        {
+            "first_name": "Cody",
+            "last_name": "Orlando",
+            "patrol": "4",
+            "car_weight_oz": 4.85,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "N12",
+            "car_number": 12,
+            "participant_id": "72c1216fb7424729aecc27310ef07b4b"
+        },
+        {
+            "first_name": "Jonathan",
+            "last_name": "Wu",
+            "patrol": "4",
+            "car_weight_oz": 2.65,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "N13",
+            "car_number": 13,
+            "participant_id": "49f7eda017194cbba2436b20155bc78a"
+        },
+        {
+            "first_name": "Harvey",
+            "last_name": "Kent",
+            "patrol": "4",
+            "car_weight_oz": 4.96,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "N14",
+            "car_number": 14,
+            "participant_id": "6b7cbed34ae24a04aa841ba0f9ccd9cd"
+        },
+        {
+            "first_name": "Mal",
+            "last_name": "Murdoch",
+            "patrol": "Exhibition",
+            "car_weight_oz": 4.9,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "L1",
+            "car_number": 1,
+            "participant_id": "52855750befb4fa0bffeac60abcb5d23"
+        },
+        {
+            "first_name": "Guy",
+            "last_name": "Murdoch",
+            "patrol": "Exhibition",
+            "car_weight_oz": 4.99,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "L2",
+            "car_number": 2,
+            "participant_id": "663ecfbd39ed490eb3af69ba0b304276"
+        },
+        {
+            "first_name": "Jeremy",
+            "last_name": "Richter",
+            "patrol": "Exhibition",
+            "car_weight_oz": 4.94,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "L3",
+            "car_number": 3,
+            "participant_id": "dfa3becd79274f74a9f66c608128cb95"
+        },
+        {
+            "first_name": "Crash",
+            "last_name": "Collins",
+            "patrol": "Exhibition",
+            "car_weight_oz": 5.01,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "L4",
+            "car_number": 4,
+            "participant_id": "ec31f20eccb645ef890ec58751d3e8dc"
+        },
+        {
+            "first_name": "Dave",
+            "last_name": "Steininger",
+            "patrol": "Exhibition",
+            "car_weight_oz": 5.05,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "L5",
+            "car_number": 5,
+            "participant_id": "dc23496727054016934ac89cda54ada8"
+        },
+        {
+            "first_name": "Scott",
+            "last_name": "Smith",
+            "patrol": "Exhibition",
+            "car_weight_oz": 5.08,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "L6",
+            "car_number": 6,
+            "participant_id": "241e8c70356b4f3182f2b3b4bddd5dc1"
+        },
+        {
+            "first_name": "Bryan",
+            "last_name": "Jenchowski",
+            "patrol": "Exhibition",
+            "car_weight_oz": 4.46,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "L7",
+            "car_number": 7,
+            "participant_id": "86aa8f629a9e44faa28cfdcf47ff3842"
+        },
+        {
+            "first_name": "John",
+            "last_name": "Sweeney",
+            "patrol": "Exhibition",
+            "car_weight_oz": 4.89,
+            "times": [],
+            "average_time": 0,
+            "best_time": Infinity,
+            "best_time_race_number": null,
+            "car_name": "L8",
+            "car_number": 8,
+            "participant_id": "3e744b7b4e4e4e51830c28959aff0594"
+        }
+    ],
+    "races": [
+        {
+            "patrol": "1",
+            "race_number": 1,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "2180e0c67885465397a61e63d2048441",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "1fd2bc5d2cb540eb856abe55c3e4f95e",
+                        "2": "8494deba225c4dda8cc38761ec1b8d45",
+                        "3": "7890a6f5640647feb87cca5ccdd91075",
+                        "4": "a42018325d77470ebab16f9601864b75"
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "d831a403574a494584597084d2ed2f35",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "1fd2bc5d2cb540eb856abe55c3e4f95e",
+                        "1": "8494deba225c4dda8cc38761ec1b8d45",
+                        "4": "7890a6f5640647feb87cca5ccdd91075",
+                        "3": "a42018325d77470ebab16f9601864b75"
+                    },
+                    "times": {}
+                }
+            ]
+        },
+        {
+            "patrol": "1",
+            "race_number": 2,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "79ce5c3ca2654a0aaf09acd858724ae2",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "5b76ac422fd14a2786fed2a480f878c4",
+                        "2": "3a48adaa2d14436080c26d32c298692c",
+                        "3": "121463d8c43340fc9ea5a264491300c9",
+                        "4": "8c1892ae186a433c8af8d6ee59d26bd0"
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "458c634ba0d149d89a80bf055cfdd126",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "5b76ac422fd14a2786fed2a480f878c4",
+                        "1": "3a48adaa2d14436080c26d32c298692c",
+                        "4": "121463d8c43340fc9ea5a264491300c9",
+                        "3": "8c1892ae186a433c8af8d6ee59d26bd0"
+                    },
+                    "times": {}
+                }
+            ]
+        },
+        {
+            "patrol": "1",
+            "race_number": 3,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "830c08eea1204e52bb07a01187518820",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "e07f066b4f49485588a17ca85963495b",
+                        "2": "a43f2d8960694e16b0c2130f4e1c75fc",
+                        "3": "a9128d37f9e84b628005c334d5f0aaa7",
+                        "4": "bc746c3d45ae46c3ab688c9c62b4c97d"
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "73e76a2c15da4a49b5a98a01a8de7793",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "e07f066b4f49485588a17ca85963495b",
+                        "1": "a43f2d8960694e16b0c2130f4e1c75fc",
+                        "4": "a9128d37f9e84b628005c334d5f0aaa7",
+                        "3": "bc746c3d45ae46c3ab688c9c62b4c97d"
+                    },
+                    "times": {}
+                }
+            ]
+        },
+        {
+            "patrol": "1",
+            "race_number": 4,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "2c3a72641c6e4c5e9d0e126f050265fb",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "7e0ce9c3de704cf2929bacad0333bc9c",
+                        "2": "ca6dddae0d624294865aa785b00989fb",
+                        "3": "6dd479219a3e40b9b9924411f0afd2f8",
+                        "4": null
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "9669a1d2d857426182ff3d91e3318957",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "7e0ce9c3de704cf2929bacad0333bc9c",
+                        "1": "ca6dddae0d624294865aa785b00989fb",
+                        "4": "6dd479219a3e40b9b9924411f0afd2f8",
+                        "3": null
+                    },
+                    "times": {}
+                }
+            ]
+        },
+        {
+            "patrol": "1",
+            "race_number": 5,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "a5d14dc8ceee4dc8a8c77c1d8344331d",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "5366f544e94c4ea0a18fc2f8a01ab86b",
+                        "2": "ab0b6264a5e54289ad11a42de3e605ba",
+                        "3": "929a1583b0294aba8057d2eae7cbdf74",
+                        "4": null
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "960ddcd88cac49da81df9e5c6f7ec653",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "5366f544e94c4ea0a18fc2f8a01ab86b",
+                        "1": "ab0b6264a5e54289ad11a42de3e605ba",
+                        "4": "929a1583b0294aba8057d2eae7cbdf74",
+                        "3": null
+                    },
+                    "times": {}
+                }
+            ]
+        },
+        {
+            "patrol": "1",
+            "race_number": 6,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "10c8d0f47de94c7182c150367f5cf5ef",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "1198f78ad0154766b409a9fac20e9417",
+                        "2": "c50d0209cddc44d1aaf64594d93875fc",
+                        "3": "4de98cd9c8f7413ab8c1be9dc9814535",
+                        "4": null
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "a6d8797d2633431683b9d3c36f5c42c4",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "1198f78ad0154766b409a9fac20e9417",
+                        "1": "c50d0209cddc44d1aaf64594d93875fc",
+                        "4": "4de98cd9c8f7413ab8c1be9dc9814535",
+                        "3": null
+                    },
+                    "times": {}
+                }
+            ]
+        },
+        {
+            "patrol": "2",
+            "race_number": 7,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "9ed35ea1991441339f2f52db7db7dab1",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "e739e0444e91490ba9a1142e2e74fa2b",
+                        "2": "8da5496b4dc246ad88be503e8e00a3c9",
+                        "3": "98cabdbf5ee0415f9a6009119d7d60a4",
+                        "4": "391e33f95a2542aea58589d258f0aef1"
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "97029022a30943b7b7e74cc6fef17caa",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "e739e0444e91490ba9a1142e2e74fa2b",
+                        "1": "8da5496b4dc246ad88be503e8e00a3c9",
+                        "4": "98cabdbf5ee0415f9a6009119d7d60a4",
+                        "3": "391e33f95a2542aea58589d258f0aef1"
+                    },
+                    "times": {}
+                }
+            ]
+        },
+        {
+            "patrol": "2",
+            "race_number": 8,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "398048a1e69848b6a5960bc753419629",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "914911509ac140f7ab913bc885e42a81",
+                        "2": "202359635180427095df35830eccdec3",
+                        "3": "e580c250e27542a5a4a07a4b9caf0c42",
+                        "4": "a86dcc3de4c0428199dd39ba92fab2e7"
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "cb45f24bf2de46a5a5e1cad7ecb27ad7",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "914911509ac140f7ab913bc885e42a81",
+                        "1": "202359635180427095df35830eccdec3",
+                        "4": "e580c250e27542a5a4a07a4b9caf0c42",
+                        "3": "a86dcc3de4c0428199dd39ba92fab2e7"
+                    },
+                    "times": {}
+                }
+            ]
+        },
+        {
+            "patrol": "2",
+            "race_number": 9,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "31e066bb55c44d43af1efc88d07df600",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "93fe287592a34376a6e75fddafea9bb6",
+                        "2": "82f9ef566f7449fda869615d7c5ccf79",
+                        "3": "64d78172c71e483e8ecaeaf9141ee1df",
+                        "4": "30211db5bac54908bda78997da4745ab"
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "02cd1b5e751d435eb4dbc347748f4c26",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "93fe287592a34376a6e75fddafea9bb6",
+                        "1": "82f9ef566f7449fda869615d7c5ccf79",
+                        "4": "64d78172c71e483e8ecaeaf9141ee1df",
+                        "3": "30211db5bac54908bda78997da4745ab"
+                    },
+                    "times": {}
+                }
+            ]
+        },
+        {
+            "patrol": "2",
+            "race_number": 10,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "cb979fc53a214f7ca4d633396c8c99b8",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "893c9028deb94862a1924b1b7616ea16",
+                        "2": "331b6b0524b7434086d020a1ca113845",
+                        "3": "f1cd3a2655394b59b8abfb6eb52ad51d",
+                        "4": null
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "56c0865bc62140a79dd85c0e67318d87",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "893c9028deb94862a1924b1b7616ea16",
+                        "1": "331b6b0524b7434086d020a1ca113845",
+                        "4": "f1cd3a2655394b59b8abfb6eb52ad51d",
+                        "3": null
+                    },
+                    "times": {}
+                }
+            ]
+        },
+        {
+            "patrol": "2",
+            "race_number": 11,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "332b5eab11a64cf58cd67640e85bef62",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "7ff4324b63834990b6aab5442a47ffd1",
+                        "2": "8e9dc375326b4d14aa7fffcd6bf17955",
+                        "3": "be1275cdbadc450794f03ac8a3d15d6e",
+                        "4": null
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "f4a102d659134b4eb21ef31d2706b169",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "7ff4324b63834990b6aab5442a47ffd1",
+                        "1": "8e9dc375326b4d14aa7fffcd6bf17955",
+                        "4": "be1275cdbadc450794f03ac8a3d15d6e",
+                        "3": null
+                    },
+                    "times": {}
+                }
+            ]
+        },
+        {
+            "patrol": "2",
+            "race_number": 12,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "b2ad6d0be74a40cab5dae44f76d73917",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "ae69faa3858142e2a523de52bf7b1e84",
+                        "2": "7feb0b27283f4438a7f5e4c9054f292d",
+                        "3": "89fbc559cb674a33a1506997ec516da3",
+                        "4": null
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "dc40dd8390894a83976360dbe20b6618",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "ae69faa3858142e2a523de52bf7b1e84",
+                        "1": "7feb0b27283f4438a7f5e4c9054f292d",
+                        "4": "89fbc559cb674a33a1506997ec516da3",
+                        "3": null
+                    },
+                    "times": {}
+                }
+            ]
+        },
+        {
+            "patrol": "3",
+            "race_number": 13,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "1c1fe95c15f54ab1be6b16c46418599c",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "d35f7daa3dcd4630ad82061384c4115f",
+                        "2": "f0ad609675724496a8d8b295034b5abe",
+                        "3": "d53f4e36bd214adbb72bb69b7531f58c",
+                        "4": "c242ab81482a49e79a700962a443145a"
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "50110152c5ff48a1963f2c80b9461839",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "d35f7daa3dcd4630ad82061384c4115f",
+                        "1": "f0ad609675724496a8d8b295034b5abe",
+                        "4": "d53f4e36bd214adbb72bb69b7531f58c",
+                        "3": "c242ab81482a49e79a700962a443145a"
+                    },
+                    "times": {}
+                }
+            ]
+        },
+        {
+            "patrol": "3",
+            "race_number": 14,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "94352053dc334a969491d1aa27b86e8e",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "38eb6411b5d64828965ca62352e5fd74",
+                        "2": "2e577448edd74552b0423c0c212e56fe",
+                        "3": "872228009675403085c6043ee49891a8",
+                        "4": "491b8103118a42a6a3f58823101e3932"
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "d11c24d7e5b841fba9c0bcf9fb6e76eb",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "38eb6411b5d64828965ca62352e5fd74",
+                        "1": "2e577448edd74552b0423c0c212e56fe",
+                        "4": "872228009675403085c6043ee49891a8",
+                        "3": "491b8103118a42a6a3f58823101e3932"
+                    },
+                    "times": {}
+                }
+            ]
+        },
+        {
+            "patrol": "3",
+            "race_number": 15,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "5313226c8c24490387c5c4cf9802a4c0",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "8eb50617b4ca4ddfb6c40360d934396f",
+                        "2": "a1efe393ea504d0587c63a8fd761d8dc",
+                        "3": "bcd4cabf33794c0f89a74bf9f3069126",
+                        "4": null
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "36f7cfd13491421e83df6724f4f94eab",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "8eb50617b4ca4ddfb6c40360d934396f",
+                        "1": "a1efe393ea504d0587c63a8fd761d8dc",
+                        "4": "bcd4cabf33794c0f89a74bf9f3069126",
+                        "3": null
+                    },
+                    "times": {}
+                }
+            ]
+        },
+        {
+            "patrol": "3",
+            "race_number": 16,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "fa659d0a9f9f4ebe9e09c414f6b4aa80",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "f291712017754a64b319946d9071377e",
+                        "2": "c112e97ee63a4466a1c83ddfe366e3e4",
+                        "3": "308dbdddab2f47f1a9ab8d384313f071",
+                        "4": null
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "8cdb2e295b1443749b74c693c00c8b25",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "f291712017754a64b319946d9071377e",
+                        "1": "c112e97ee63a4466a1c83ddfe366e3e4",
+                        "4": "308dbdddab2f47f1a9ab8d384313f071",
+                        "3": null
+                    },
+                    "times": {}
+                }
+            ]
+        },
+        {
+            "patrol": "3",
+            "race_number": 17,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "04024ce97e23418da75c6a8a641b4304",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "5df5de19a760453ab962a2aa9c25792c",
+                        "2": "8f68f784a7764e7e96ecdde8ac80e18b",
+                        "3": "1f8e9abc3941477a8e883008b2b0dad9",
+                        "4": null
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "bf7d307ebefa46ea9329e048455d1213",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "5df5de19a760453ab962a2aa9c25792c",
+                        "1": "8f68f784a7764e7e96ecdde8ac80e18b",
+                        "4": "1f8e9abc3941477a8e883008b2b0dad9",
+                        "3": null
+                    },
+                    "times": {}
+                }
+            ]
+        },
+        {
+            "patrol": "4",
+            "race_number": 18,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "ec40b65759d1412bb5b16fd5317a8627",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "38f3e92a51684bacb99fe3ccf73ae354",
+                        "2": "15d9cd7eb90b44528322cf7c922a836b",
+                        "3": "4357a43af7624cc6b687051d0ace0c54",
+                        "4": "be109a53ccee431195819ec2a8fff4ad"
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "a541f9bffedd491ab84b0f2a9500049f",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "38f3e92a51684bacb99fe3ccf73ae354",
+                        "1": "15d9cd7eb90b44528322cf7c922a836b",
+                        "4": "4357a43af7624cc6b687051d0ace0c54",
+                        "3": "be109a53ccee431195819ec2a8fff4ad"
+                    },
+                    "times": {}
+                }
+            ]
+        },
+        {
+            "patrol": "4",
+            "race_number": 19,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "d1ade87467da4781a9204c9b9148433a",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "b063dfddb1e54652a0c53760ecc467f4",
+                        "2": "c8a7b0031cc64b1880a50bd38f8c3f36",
+                        "3": "c243865d0e094bbe859c01a91a3d5045",
+                        "4": "6547eab0c7b94b29b257502339d6a5aa"
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "b7f1ea6e45774c8ea0da70ee24568ca7",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "b063dfddb1e54652a0c53760ecc467f4",
+                        "1": "c8a7b0031cc64b1880a50bd38f8c3f36",
+                        "4": "c243865d0e094bbe859c01a91a3d5045",
+                        "3": "6547eab0c7b94b29b257502339d6a5aa"
+                    },
+                    "times": {}
+                }
+            ]
+        },
+        {
+            "patrol": "4",
+            "race_number": 20,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "bb83d34bf431492890f55c16735b6b7b",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "3467aeaf183b4c5a92e4c22ffe40e776",
+                        "2": "f78a1352fa61403ea652a3999a1e0f2d",
+                        "3": "18f9ca08e3f74d09bfe8a7a20595c0d3",
+                        "4": null
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "9ff0ac63ce424a9ea8a874c3f0801fbc",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "3467aeaf183b4c5a92e4c22ffe40e776",
+                        "1": "f78a1352fa61403ea652a3999a1e0f2d",
+                        "4": "18f9ca08e3f74d09bfe8a7a20595c0d3",
+                        "3": null
+                    },
+                    "times": {}
+                }
+            ]
+        },
+        {
+            "patrol": "4",
+            "race_number": 21,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "1860e4ec81d24f79bf7b5b083299af00",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "72c1216fb7424729aecc27310ef07b4b",
+                        "2": "49f7eda017194cbba2436b20155bc78a",
+                        "3": "6b7cbed34ae24a04aa841ba0f9ccd9cd",
+                        "4": null
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "f8ff2ab719644cb384034dc0a635d48a",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "72c1216fb7424729aecc27310ef07b4b",
+                        "1": "49f7eda017194cbba2436b20155bc78a",
+                        "4": "6b7cbed34ae24a04aa841ba0f9ccd9cd",
+                        "3": null
+                    },
+                    "times": {}
+                }
+            ]
+        },
+        {
+            "patrol": "Exhibition",
+            "race_number": 22,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "7f190d96dc9c4d0e80cb6106e48ff4c2",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "52855750befb4fa0bffeac60abcb5d23",
+                        "2": "663ecfbd39ed490eb3af69ba0b304276",
+                        "3": "dfa3becd79274f74a9f66c608128cb95",
+                        "4": "ec31f20eccb645ef890ec58751d3e8dc"
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "494a44242f8148c197197094b7dcf79d",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "52855750befb4fa0bffeac60abcb5d23",
+                        "1": "663ecfbd39ed490eb3af69ba0b304276",
+                        "4": "dfa3becd79274f74a9f66c608128cb95",
+                        "3": "ec31f20eccb645ef890ec58751d3e8dc"
+                    },
+                    "times": {}
+                }
+            ]
+        },
+        {
+            "patrol": "Exhibition",
+            "race_number": 23,
+            "round": 1,
+            "heats": [
+                {
+                    "heat_id": "e53032e230ac4757bcb2046a38f3038e",
+                    "heat_number": 1,
+                    "lanes": {
+                        "1": "dc23496727054016934ac89cda54ada8",
+                        "2": "241e8c70356b4f3182f2b3b4bddd5dc1",
+                        "3": "86aa8f629a9e44faa28cfdcf47ff3842",
+                        "4": "3e744b7b4e4e4e51830c28959aff0594"
+                    },
+                    "times": {}
+                },
+                {
+                    "heat_id": "d332019e465243f49dfb4ee88fe96e2c",
+                    "heat_number": 2,
+                    "lanes": {
+                        "2": "dc23496727054016934ac89cda54ada8",
+                        "1": "241e8c70356b4f3182f2b3b4bddd5dc1",
+                        "4": "86aa8f629a9e44faa28cfdcf47ff3842",
+                        "3": "3e744b7b4e4e4e51830c28959aff0594"
+                    },
+                    "times": {}
+                }
+            ]
+        }
+    ],
+    "initial_races_completed": {
+        "1": false,
+        "2": false,
+        "3": false,
+        "4": false,
+        "5": true,
+        "Exhibition": false
+    },
+    "semi_final_races_completed": {
+        "1": false,
+        "2": false,
+        "3": false,
+        "4": false,
+        "5": true,
+        "Exhibition": false
+    }
+}

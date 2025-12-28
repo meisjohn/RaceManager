@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    {% extends 'base.html' %}
+
+    {% block content %}
+    <section class="section">
+      <div class="container">
+        <h1 class="title">Admin — Races</h1>
+        <div class="level">
+          <div class="level-left">
+            <div>Signed in: <strong>{{ session.get('fb_email') or session.get('role') or 'unknown' }}</strong></div>
+            <div style="margin-left:1rem;">Mode: <span class="tag is-light">{{ data_mode }}</span></div>
+          </div>
+          <div class="level-right">
+            <a class="button is-light" href="/logout">Logout</a>
+          </div>
+        </div>
+
+        <div class="columns">
+          <div class="column is-two-thirds">
+            <div class="box">
+              <h2 class="subtitle">Existing Races</h2>
+              <table class="table is-fullwidth is-striped">
+                <thead>
+                  <tr><th>Race ID</th><th>Name</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                  {% for r in races %}
+                  <tr>
+                    <td>{{ r.id }}</td>
+                    <td>{{ r.name }}</td>
+                    <td>
+                      <a class="button is-small is-info" href="{{ url_for('admin_race_members', race_id=r.id) }}">Members</a>
+                      <a class="button is-small" href="/?race={{ r.id }}">Open</a>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="column">
+            <div class="box">
+              <h2 class="subtitle">Create Race</h2>
+              <form method="post" action="{{ url_for('admin_create_race') }}">
+                <div class="field">
+                  <label class="label">Display Name</label>
+                  <div class="control">
+                    <input class="input" name="name" placeholder="Display name (e.g. PA 1249 2026)">
+                  </div>
+                </div>
+                <div class="field">
+                  <div class="control">
+                    <button class="button is-primary" type="submit">Create Race</button>
+                  </div>
+                </div>
+                <p class="help">A URL-friendly race id will be generated from the display name (underscores replace spaces).</p>
+              </form>
+            </div>
+
+            {% if firebase_admin_available %}
+            <div class="box">
+              <h2 class="subtitle">Set Top Admin</h2>
+              <form method="post" action="{{ url_for('admin_set_top_admin') }}">
+                <div class="field">
+                  <label class="label">User UID</label>
+                  <div class="control"><input class="input" name="uid" placeholder="Firebase UID"></div>
+                </div>
+                <div class="field">
+                  <label class="label">Make Top Admin</label>
+                  <div class="control">
+                    <div class="select">
+                      <select name="isTop">
+                        <option value="true">True</option>
+                        <option value="false">False</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div class="field">
+                  <div class="control"><button class="button is-danger" type="submit">Set Claim</button></div>
+                </div>
+              </form>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </section>
+    {% endblock %}
+                              <option value="true">True</option>

@@ -6,59 +6,40 @@
                 <p class="notification is-danger">{{ error_message }}</p>
             {% endif %}
 
+            <h1 class="title">Log in with Token</h1>
             {% if not session['role'] %}
-                <h1 class="title">Set User Role</h1>
-                <div class="field">
-                    <form method="POST" action="/owner_login">
-                        <label class="label" for="token">Owner Token:</label>
-                        <div class="control">
-                            <input class="input" type="text" name="token">
-                        </div>
-                        <div class="control">
-                            <input class="button is-primary" type="submit" value="Login">
-                        </div>
-                    </form>
-                </div>
-            {% endif %}
-
-            <div class="field">
-                {% if session['role'] == "OWNER" %}
-                    <h1 class="title">Add Judge</h1>
-                {% endif %}
-                {% if session['role'] != "JUDGE" %}
-                    <form method="POST" action="/judge_login">
-                        <label class="label" for="token">Judge Token:</label>
-                        <div class="control">
-                            <input class="input" type="text" name="token" {% if judge_token %} value="{{ judge_token }}" {% endif %}>
-                        </div>
-                        <label class="label" for="token">Judge Name:</label>
-                        <div class="control">
-                            <input class="input" type="text" name="judge_name" {% if judge_name %} value="{{ judge_name }}" {% endif %}>
-                        </div>
-                        <div class="control">
-                            {% if session['role'] == "OWNER" %}
-                                <input class="button is-primary" type="submit" value="Add / Lookup">
-                            {% else %}
+                <section class="section">
+                    <h2 class="title is-4"> Owner Login</h2>
+                    <div class="field">
+                        <form method="POST" action="/owner_login">
+                            <label class="label" for="owner_token">Owner Token:</label>
+                            <div class="control">
+                                <input class="input" type="text" name="owner_token" {% if owner_token %} value="{{ owner_token }}" {% endif %}>
+                            </div>
+                            <div class="control">
                                 <input class="button is-primary" type="submit" value="Login">
-                            {% endif %}
-                        </div>
-                    </form>
-                {% endif %}
-            </div>
-
-            {% if judge_qr %}
-                <h2 class="subtitle">QR Code for {{ judge_name }}</h2>
-                <div class="columns">
-                    <div class="column is-one-third">
-                        <figure class="image">
-                            <img src="{{ judge_qr }}" alt="QR Code" height="300" width="300">
-                        </figure>
+                            </div>
+                        </form>
                     </div>
-                </div>
-                <p></p>
+                </section>
+                <section class="section">
+                    <h2 class="title is-4"> Judge Login</h2>
+                    <div class="field">
+                        <form method="POST" action="/judge_login">
+                            <label class="label" for="judge_token">Judge Token:</label>
+                            <div class="control">
+                                <input class="input" type="text" name="judge_token" {% if judge_token %} value="{{ judge_token }}" {% endif %}>
+                            </div>
+                            <div class="control">
+                                <input class="button is-primary" type="submit" value="Login">
+                            </div>
+                        </form>
+                    </div>
+                </section>
             {% endif %}
 
             {% if session['role'] %}
+                <h1 class="title">Logged in as {{ session['role']|title }}</h1>
                 <div class="field">
                     <p></p>
                     <a href="/logout" class="button is-warning">Logout</a>

@@ -1,0 +1,128 @@
+<!doctype html>
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <h1 class="title">Admin — Members for {{ race_id }}</h1>
+
+  <div class="columns">
+    <div class="column is-two-thirds">
+      <!-- Members and Judges forms/tables -->
+      <section class="box">
+        <h2 class="subtitle">Members</h2>
+        <table class="table is-fullwidth is-hoverable">
+          <thead><tr><th>UID</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            {% for uid, data in members.items() %}
+              {% set role = data.role if data.role else data.get('role') %}
+              {% set deleted = data.deleted if data.deleted is defined else data.get('deleted') %}
+              {% set deletedAt = data.deletedAt if data.deletedAt is defined else data.get('deletedAt') %}
+              <tr>
+                <td>{{ uid }}</td>
+                <td>{{ role }}</td>
+                <td>{% if deleted %}<span class="tag is-danger">Deleted</span> {{ deletedAt }}{% else %}<span class="tag is-success">Active</span>{% endif %}</td>
+                <td>
+                  {% if deleted %}
+                    <form method="post" style="display:inline" action="{{ url_for('admin_race_members', race_id=race_id) }}">
+                      <input type="hidden" name="restore_uid" value="{{ uid }}">
+                      <button class="button is-small is-warning" type="submit">Restore</button>
+                    </form>
+                  {% else %}
+                    <form method="post" style="display:inline" action="{{ url_for('admin_race_members', race_id=race_id) }}">
+                      <input type="hidden" name="delete_uid" value="{{ uid }}">
+                      <button class="button is-small is-danger" type="submit">Remove</button>
+                    </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+      <section class="box">
+        <h2 class="subtitle">Judges</h2>
+        <form method="post" class="field has-addons">
+          <div class="control">
+            <input class="input" type="text" name="regen_judge" placeholder="Judge name to create/regenerate">
+          </div>
+          <div class="control">
+            <button class="button is-primary" type="submit">Create / Regenerate Judge</button>
+          </div>
+        </form>
+
+        <table class="table is-fullwidth">
+          <thead><tr><th>Judge</th><th>Token</th><th>Actions</th></tr></thead>
+          <tbody>
+            {% for jname, jinfo in judges.items() %}
+            <tr>
+              <td>{{ jname }}</td>
+              <td>{{ jinfo.token }}</td>
+              <td>
+                <form method="post" style="display:inline">
+                  <input type="hidden" name="regen_judge" value="{{ jname }}">
+                  <button class="button is-small is-info">Regenerate</button>
+                </form>
+                <form method="post" style="display:inline" onsubmit="return confirm('Remove judge {{ jname }}?');">
+                  <input type="hidden" name="remove_judge" value="{{ jname }}">
+                  <button class="button is-small is-danger">Remove</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <div class="column">
+      <!-- Right-side QR panel -->
+      <aside class="box">
+        <h3 class="subtitle">QR Codes</h3>
+
+        <div class="content">
+          <h4 class="is-6">Owner</h4>
+          {% if owner_qr %}
+            <p><a href="{{ url_for('static', filename='qr/' ~ owner_qr) }}" target="_blank">
+              <img src="{{ url_for('static', filename='qr/' ~ owner_qr) }}" alt="Owner QR" style="max-width:100%; height:auto;">
+            </a></p>
+            <p><strong>Owner token:</strong> <code>{{ owner_token }}</code></p>
+            <form method="post" action="{{ url_for('admin_set_owner_token') }}">
+              <input type="hidden" name="race" value="{{ race_id }}">
+              <button class="button is-small is-warning" type="submit">Rotate Owner Token</button>
+            </form>
+          {% else %}
+            <p>No owner token/QR set for this race.</p>
+            <form method="post" action="{{ url_for('admin_set_owner_token') }}">
+              <input type="hidden" name="race" value="{{ race_id }}">
+              <button class="button is-small is-primary" type="submit">Generate Owner Token & QR</button>
+            </form>
+          {% endif %}
+        </div>
+
+        <hr>
+
+        <div class="content">
+          <h4 class="is-6">Judges</h4>
+          {% if judges %}
+            {% for jname, jinfo in judges.items() %}
+              {% if jinfo.qr %}
+                <div style="margin-bottom:12px;">
+                  <strong>{{ jname }}</strong><br>
+                  <a href="{{ url_for('static', filename='qr/' ~ jinfo.qr) }}" target="_blank">
+                    <img src="{{ url_for('static', filename='qr/' ~ jinfo.qr) }}" alt="QR for {{ jname }}" style="max-width:100%; height:auto;">
+                  </a>
+                  <div style="margin-top:6px;">
+                    <p><strong>Judge Token:</strong> <code>{{ jinfo.token }}</code></p>
+                  </div>
+                </div>
+              {% endif %}
+            {% endfor %}
+          {% else %}
+            <p>No judges configured for this race.</p>
+          {% endif %}
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+{% endblock %}

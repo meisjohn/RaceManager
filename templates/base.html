@@ -20,7 +20,7 @@
         <div class="columns is-vcentered">
             <div class="column is-narrow">
                 <figure class="image is-64x64">
-                    <img src="{{ url_for('static', filename='flags.png') }}" alt="Logo">
+                    <a href="{{ url_for('index') }}"><img src="{{ url_for('static', filename='flags.png') }}" alt="Logo"></a>
                 </figure>
             </div>
             <div class="column">
@@ -28,34 +28,54 @@
             </div>
         </div>
     </div>
-
-    <nav class="navbar is-primary" role="navigation" aria-label="main navigation">
+    <nav class="navbar is-primary " role="navigation" aria-label="main navigation">
         <div class="navbar-brand">
-            <a class="navbar-item" href="/">
-                </a>
-
-            <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarBasicExample">
+            <a role="button" class="navbar-burger is-light" aria-label="menu" aria-expanded="false" data-target="navbarBasicExample">
                 <span aria-hidden="true"></span>
                 <span aria-hidden="true"></span>
                 <span aria-hidden="true"></span>
                 <span aria-hidden="true"></span>
             </a>
         </div>
-
         <div id="navbarBasicExample" class="navbar-menu">
             <div class="navbar-start">
                 <a class="navbar-item has-text-white has-text-weight-bold" href="/">Participants</a>
                 <a class="navbar-item has-text-white has-text-weight-bold" href="/schedule">Race Schedule</a>
                 <a class="navbar-item has-text-white has-text-weight-bold" href="/display_results">Race Results</a>
                 <a class="navbar-item has-text-white has-text-weight-bold" href="/design_results">Design Results</a>
-                {% if session['role'] %}
-                    <a class="navbar-item has-text-white has-text-weight-bold" href="/login">{{ session['role']|title }}: Manage Role</a>
+                {% if session.get('role') %}
+                    <a class="navbar-item has-text-white has-text-weight-bold" href="/logout">{{ session.get('role')|title }}: Logout</a>
                 {% else %}
                     <a class="navbar-item has-text-white has-text-weight-bold" href="/login">Login</a>
                 {% endif %}
+                {%- if session.get('isTopAdmin') or session.get('role') == 'OWNER' -%}
+                    <a class="navbar-item has-text-white has-text-weight-bold" href="/admin/ui">Admin</a>
+                {%- endif -%}
+            </div>
+            <div class="navbar-end">
+                <div class="navbar-item">
+                    <a href="{{ url_for('race_qr_code') }}">
+                        <span class="tag is-light">Race: {{ current_race_name }}</span>
+                    </a>
+                </div>
             </div>
         </div>
     </nav>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="container" style="margin-top:0.5rem">
+                    {% for category, message in messages %}
+                        {% set cls = 'is-info' %}
+                        {% if category in ['warning'] %}{% set cls = 'is-warning' %}{% endif %}
+                        {% if category in ['error','danger'] %}{% set cls = 'is-danger' %}{% endif %}
+                        {% if category in ['success'] %}{% set cls = 'is-success' %}{% endif %}
+                        <div class="notification {{ cls }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
 
     <div class="container">
         <div class="box">

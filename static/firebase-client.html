@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Firebase Client Example</title>
+  </head>
+  <body>
+    <h3>Firebase Client: sign-in and get ID token</h3>
+    <div>
+      <input id="email" placeholder="email" />
+      <input id="password" placeholder="password" type="password" />
+      <button id="signIn">Sign In</button>
+      <button id="anon">Sign In Anon</button>
+    </div>
+    <pre id="output"></pre>
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script>
+      // Replace with your Firebase config
+      const firebaseConfig = {
+        apiKey: "REPLACE_ME",
+        authDomain: "REPLACE_ME",
+        projectId: "REPLACE_ME"
+      };
+      firebase.initializeApp(firebaseConfig);
+      const auth = firebase.auth();
+
+      function out(msg){ document.getElementById('output').textContent += msg + '\n'; }
+
+      document.getElementById('signIn').onclick = async () => {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        try{
+          const user = await auth.signInWithEmailAndPassword(email,password);
+          const token = await user.user.getIdToken();
+          out('ID Token (short): ' + token.slice(0,100) + '...');
+          out('Logging in to server session...');
+          // Post token to server to establish a session cookie
+          const resp = await fetch('/session_login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken: token })
+          });
+          if (resp.ok) {
+            out('Server session established.');
+            // redirect to home or race-specific link
+            window.location.href = '/';
+          } else {
+            const txt = await resp.text();
+            out('Server login failed: ' + txt);
+          }
+        }catch(e){ out('Sign in error: '+e.message); }
+      }
+
+      document.getElementById('anon').onclick = async () => {
+        try{
+          const cred = await auth.signInAnonymously();
+          const token = await cred.user.getIdToken();
+          out('Anon ID Token: ' + token.slice(0,100) + '...');
+          // also establish server session
+          await fetch('/session_login', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: token })
+          });
+        }catch(e){ out('Anon error: '+e.message); }
+      }
+
+      // Example: call API with race param and Authorization header
+      async function callApiExample(token, raceId){
+        const resp = await fetch(`/race/${raceId}/data`, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const json = await resp.json();
+        out('API response: ' + JSON.stringify(json));
+      }
+    </script>
+  </body>
+</html>

@@ -8,28 +8,28 @@
                 <div class="field">
                     <label class="label">First Name</label>
                     <div class="control">
-                        <input class="input" type="text" value="{{ participant.first_name }}" readonly>
+                        <input class="input" type="text" name="first_name" value="{{ participant.first_name }}">
                     </div>
                 </div>
 
                 <div class="field">
                     <label class="label">Last Name</label>
                     <div class="control">
-                        <input class="input" type="text" value="{{ participant.last_name }}" readonly>
+                        <input class="input" type="text" name="last_name" value="{{ participant.last_name }}">
                     </div>
                 </div>
 
                 <div class="field">
                     <label class="label">Patrol</label>
                     <div class="control">
-                        <input class="input" type="text" value="{{ patrol_names.get(participant.patrol) }}" readonly>
+                        <input class="input is-static" type="text" value="{{ patrol_names.get(participant.patrol) }}" readonly>
                     </div>
                 </div>
 
                 <div class="field">
                     <label class="label">Car Number</label>
                     <div class="control">
-                        <input class="input" type="text" value="{{ participant.car_number }}" readonly>
+                        <input class="input is-static" type="text" value="{{ participant.car_number }}" readonly>
                     </div>
                 </div>
 
