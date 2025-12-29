@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Pinecar Race Manager</title>
+    <title>Pinecar Race Manager - {{ current_race_name }}</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/bulma.css') }}">
@@ -29,34 +29,36 @@
         </div>
     </div>
     <nav class="navbar is-primary " role="navigation" aria-label="main navigation">
-        <div class="navbar-brand">
-            <a role="button" class="navbar-burger is-light" aria-label="menu" aria-expanded="false" data-target="navbarBasicExample">
-                <span aria-hidden="true"></span>
-                <span aria-hidden="true"></span>
-                <span aria-hidden="true"></span>
-                <span aria-hidden="true"></span>
-            </a>
-        </div>
-        <div id="navbarBasicExample" class="navbar-menu">
-            <div class="navbar-start">
-                <a class="navbar-item has-text-white has-text-weight-bold" href="/">Participants</a>
-                <a class="navbar-item has-text-white has-text-weight-bold" href="/schedule">Race Schedule</a>
-                <a class="navbar-item has-text-white has-text-weight-bold" href="/display_results">Race Results</a>
-                <a class="navbar-item has-text-white has-text-weight-bold" href="/design_results">Design Results</a>
-                {% if session.get('role') %}
-                    <a class="navbar-item has-text-white has-text-weight-bold" href="/logout">{{ session.get('role')|title }}: Logout</a>
-                {% else %}
-                    <a class="navbar-item has-text-white has-text-weight-bold" href="/login">Login</a>
-                {% endif %}
-                {%- if session.get('isTopAdmin') or session.get('role') == 'OWNER' -%}
-                    <a class="navbar-item has-text-white has-text-weight-bold" href="/admin/ui">Admin</a>
-                {%- endif -%}
+        <div class="container">
+            <div class="navbar-brand">
+                <a role="button" class="navbar-burger is-light" aria-label="menu" aria-expanded="false" data-target="navbarBasicExample">
+                    <span aria-hidden="true"></span>
+                    <span aria-hidden="true"></span>
+                    <span aria-hidden="true"></span>
+                    <span aria-hidden="true"></span>
+                </a>
             </div>
-            <div class="navbar-end">
-                <div class="navbar-item">
-                    <a href="{{ url_for('race_qr_code') }}">
-                        <span class="tag is-light">Race: {{ current_race_name }}</span>
-                    </a>
+            <div id="navbarBasicExample" class="navbar-menu">
+                <div class="navbar-start">
+                    <a class="navbar-item has-text-white has-text-weight-bold" href="/">Participants</a>
+                    <a class="navbar-item has-text-white has-text-weight-bold" href="/schedule">Race Schedule</a>
+                    <a class="navbar-item has-text-white has-text-weight-bold" href="/display_results">Race Results</a>
+                    <a class="navbar-item has-text-white has-text-weight-bold" href="/design_results">Design Results</a>
+                    {% if session.get('role') %}
+                        <a class="navbar-item has-text-white has-text-weight-bold" href="/logout">{{ session.get('role')|title }}: Logout</a>
+                    {% else %}
+                        <a class="navbar-item has-text-white has-text-weight-bold" href="/login">Login</a>
+                    {% endif %}
+                    {%- if session.get('isTopAdmin') or session.get('role') == 'OWNER' -%}
+                        <a class="navbar-item has-text-white has-text-weight-bold" href="/admin/ui">Admin</a>
+                    {%- endif -%}
+                </div>
+                <div class="navbar-end">
+                    <div class="navbar-item">
+                        <a href="{{ url_for('race_links') }}">
+                            <span class="tag is-text is-light">Race: {{ current_race_name }}</span>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>

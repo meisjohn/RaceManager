@@ -1,6 +1,7 @@
 from glob import glob
 import logging
 import sys
+from typing import Dict, List
 from flask import Flask, render_template, request, redirect, url_for, \
     jsonify, Response, flash, session, g
 import itertools
@@ -108,8 +109,18 @@ except Exception:
     FIRESTORE_AVAILABLE = False
 
 CURRENT_RACE_ID = os.environ.get("DEFAULT_RACE", "demo")
+CONFIG_DIR = os.environ.get("CONFIG_DIR", ".")
 USE_FIRESTORE = os.environ.get("USE_FIRESTORE", "0").lower() in ("1", "true", "yes")
+
+
+# Config File templates and constants
 DATA_FILE_TEMPLATE = "race_data_{race_id}.json"
+RACE_MEMBERS_FILE_TEMPLATE = "race_members_{race_id}.json"
+PATROL_CONFIG_FILE = "patrol_config.json"
+AUTH_CONFIG_FILE = "auth_config.json"
+
+NUM_LANES = os.getenv("NUM_LANES", 4)
+
 
 # In-memory per-race cache (default TTL seconds). Use Redis later for cross-instance caching.
 CACHE_TTL = int(os.environ.get('CACHE_TTL', '30'))
@@ -148,12 +159,14 @@ def get_race_cached(race_id, ttl=None):
         except Exception:
             return None
     age = time.time() - entry.get('ts', 0)
+    #logger.debug(f"Loaded data: {entry.get('data')}")
     logger.debug('Cache hit for race %s (age=%.1fs)', race_id, age)
     return entry.get('data')
 
 def set_race_cached(race_id, data):
     try:
         with _get_race_lock(race_id):
+            #logger.debug(f"data: {data}")
             _race_cache[race_id] = {'data': data, 'ts': time.time()}
             logger.info('Set in-memory cache for race %s', race_id)
     except Exception:
@@ -168,7 +181,7 @@ def invalidate_race_cache(race_id):
         logger.exception('Failed to invalidate cache for race %s', race_id)
 
 def data_filename_for_race(race_id):
-    return DATA_FILE_TEMPLATE.format(race_id=str(race_id))
+    return os.path.join(CONFIG_DIR, DATA_FILE_TEMPLATE.format(race_id=str(race_id)))
 
 
 def read_race_doc(race_id):
@@ -183,10 +196,11 @@ def read_race_doc(race_id):
             try:
                 with open(fn, 'r') as f:
                     return json.load(f)
-            except Exception:
+            except FileNotFoundError:
+                logger.warning(f"Race data file '{fn}' not found")
                 return {}
-    except Exception:
-        logger.exception('Error reading race doc %s', race_id)
+    except Exception as e:
+        logger.exception('Error reading race doc %s, exception: %s', race_id, str(e))
         return {}
 
 
@@ -362,7 +376,7 @@ def require_role(min_role):
     return decorator
 
 def members_filename_for_race(race_id):
-    return f"race_members_{race_id}.json"
+    return os.path.join(CONFIG_DIR, RACE_MEMBERS_FILE_TEMPLATE.format(race_id=str(race_id)))
 
 def read_members_local(race_id):
     fname = members_filename_for_race(race_id)
@@ -378,7 +392,15 @@ def write_members_local(race_id, members):
         json.dump(members, f)
 
 # Load patrol names from JSON config file
-patrol_names = {
+
+
+def patrol_config_filename():
+    return os.path.join(CONFIG_DIR, PATROL_CONFIG_FILE)
+
+def auth_config_filename():
+    return os.path.join(CONFIG_DIR, AUTH_CONFIG_FILE)
+
+default_patrol_names = {
     "1": "Foxes", 
     "2": "Hawks", 
     "3": "Mountain Lions", 
@@ -386,22 +408,20 @@ patrol_names = {
     "5": "Adventurers", 
     "Exhibition": "Exhibition"
 }
-patrol_config_file = glob("*/patrol_config.json", recursive=True)
-if patrol_config_file:
-    with open(patrol_config_file[0], 'r') as f:
-        patrol_names = json.load(f)
+fn = patrol_config_filename()
+if fn and os.path.exists(fn):
+    with open(fn, 'r') as f:
+        default_patrol_names = json.load(f)
 else:
-    logging.warning("No patrol_config.json file found; using default patrol names.")
+    logger.warning("No patrol_config.json file found; using default patrol names.")
 
 auth_config = {}
-auth_config_file=glob("*/auth_config.json", recursive=True)
-if auth_config_file:
-    with open(auth_config_file[0], 'r') as f:
+fn = auth_config_filename()
+if fn and os.path.exists(fn):
+    with open(fn, 'r') as f:
         auth_config = json.load(f)
 else:
-    logging.warning("No auth_config.json file found; using empty config.")
-
-NUM_LANES = os.getenv("NUM_LANES", 4)
+    logger.warning("No auth_config.json file found; using empty config.")
 
 # DATA_FILE is per-race. Use `data_filename_for_race(race_id)` or Firestore when enabled.
 
@@ -422,7 +442,7 @@ class Participant:
         self.last_name = last_name
         self.patrol = patrol
         self.car_weight_oz = 0
-        self.times = []
+        self.times: List[float] = []
         self.average_time = 0
         self.best_time = float('inf')
         self.best_time_race_number = None
@@ -438,10 +458,10 @@ class Race:
     def __init__(self, patrol, race_number):
         self.patrol = patrol
         self.race_number = race_number
-        self.heats = []
+        self.heats: List[Heat] = []
         self.round = Rounds.NONE
     def __str__(self):
-        my_str=f"R({patrol_names[self.patrol]} {self.race_number}): Round: {self.round}" + os.linesep
+        my_str=f"R({self.patrol} {self.race_number}): Round: {self.round}" + os.linesep
         my_str+=os.linesep.join([f"Heat: {h}" for h in self.heats])
         return my_str
     def toJSON(self):
@@ -455,8 +475,8 @@ class Heat:
     def __init__(self, heat_number):
         self.heat_id = uuid.uuid4().hex
         self.heat_number = heat_number
-        self.lanes = {}
-        self.times = {}
+        self.lanes: Dict[int, Participant] = {}
+        self.times: Dict[int, float] = {}
     def __str__(self):
         my_str=f"H({self.heat_id} {self.heat_number}):" + os.linesep
         my_str+=os.linesep.join([f"Lane {l}: {p}" for l,p in sorted(self.lanes.items())])
@@ -471,8 +491,8 @@ class Heat:
 
 class Design:
     def __init__(self, participant):
-        self.participant = participant
-        self.scores = {}  # {judge_id: score}
+        self.participant: Participant = participant
+        self.scores: Dict[str, float] = {}  # {judge_id: score}
 
     def toJSON(self):
         return {
@@ -480,27 +500,20 @@ class Design:
             "scores": self.scores,
         }
 
-# Race Data
-participants = []
-races = []
-initial_races_completed = {p:False for p in patrol_names}
-semi_final_races_completed = {p:False for p in patrol_names if p != "Exhibition"}
-designs = {}
-judging_active = True
-judges = {}
-
 class RaceContext:
-    def __init__(self, race_id, participants, races, designs, judges,
+    def __init__(self, race_id, name, participants, races, designs, judges,
                  initial_races_completed, semi_final_races_completed,
-                 judging_active):
-        self.race_id = race_id
-        self.participants = participants
-        self.races = races
-        self.designs = designs
-        self.judges = judges
-        self.initial_races_completed = initial_races_completed
-        self.semi_final_races_completed = semi_final_races_completed
-        self.judging_active = judging_active
+                 judging_active, patrol_names = default_patrol_names):
+        self.race_id: str = race_id
+        self.name: str = name
+        self.participants: List[Participant] = participants
+        self.races: List[Race] = races
+        self.designs: Dict[str, Design] = designs
+        self.judges: Dict[str, Dict[str, str]] = judges
+        self.initial_races_completed: Dict[str, bool] = initial_races_completed
+        self.semi_final_races_completed: Dict[str, bool] = semi_final_races_completed
+        self.judging_active: bool = judging_active
+        self.patrol_names: Dict[str, str] = patrol_names
 
 def require_race_context(func):
     @wraps(func)
@@ -515,17 +528,52 @@ def require_race_context(func):
         return func(*args, **kwargs)
     return wrapper
 
-def load_data(race_id=None):
+def create_race(name):
+
+    # If race_id not provided, derive from name
+    if not name:
+        raise RuntimeError('Must specify name whenc creating a race')
+    # create a simple URL-friendly id: keep alphanum, dash, underscore; replace other chars/spaces with underscore
+    rid = re.sub(r"[^A-Za-z0-9_-]+", '_', name)
+    rid = re.sub(r'_+', '_', rid).strip('_')
+    race_id = rid[:120] or name.replace(' ', '_')
+    url = request.url_root.rstrip('/') + url_for('index', race=race_id)
+    race_qr = generate_qr(url, f'race-{race_id}')
+
+    payload = {
+        'name': name,
+        'race_id': race_id,
+        'race_qr': race_qr,
+        'participants': [],
+        'races': [],
+        'designs': {},
+        'judges': {},
+        'judging_active': True,
+        'initial_races_completed': {p: False for p in default_patrol_names},
+        'semi_final_races_completed': {p: False for p in default_patrol_names if p != 'Exhibition'},
+        'patrol_names': default_patrol_names
+    }
+
+    if USE_FIRESTORE and FIRESTORE_AVAILABLE:
+        payload['createdAt'] = _gcf.SERVER_TIMESTAMP
+    
+    return payload
+
+def load_data(race_id=None, name=None):
     """Load race data for given race_id. If USE_FIRESTORE is enabled and Firestore
     client is available it will attempt to load from Firestore first; otherwise uses
     a per-race JSON file on disk (race_data_<race_id>.json)."""
     resave = False
-    global participants, races, initial_races_completed, semi_final_races_completed
-    global designs, judges, judging_active, CURRENT_RACE_ID
+    global CURRENT_RACE_ID
 
     if race_id is None:
         race_id = CURRENT_RACE_ID
     CURRENT_RACE_ID = str(race_id)
+    if name is None:
+        try:
+            name = session.get('current_race_name', str(race_id))
+        except RuntimeError:
+            name = str(race_id)
 
     # Try in-memory cache first
     cached = get_race_cached(CURRENT_RACE_ID)
@@ -533,51 +581,41 @@ def load_data(race_id=None):
         logger.debug('Loaded race %s from in-memory cache', CURRENT_RACE_ID)
         data = cached
     else:
-        data = None
-        if USE_FIRESTORE and FIRESTORE_AVAILABLE:
-            logger.info('Attempting to load race %s from Firestore', CURRENT_RACE_ID)
-            try:
-                db = _gcf.Client()
-                doc = db.collection('races').document(CURRENT_RACE_ID).get()
-                if doc.exists:
-                    data = doc.to_dict()
-            except Exception as e:
-                logger.warning("Warning: Firestore read failed: %s", e, exc_info=True)
+        data = read_race_doc(CURRENT_RACE_ID)
 
-        if data is None:
-            filename = data_filename_for_race(CURRENT_RACE_ID)
-            logger.info('Loading race %s from local file %s', CURRENT_RACE_ID, filename)
-            try:
-                with open(filename, 'r') as f:
-                    data = json.load(f)
-            except FileNotFoundError:
-                # create an initial save to ensure file exists
-                participants = []
-                races = []
-                designs = {}
-                judges = {}
-                initial_races_completed = {p: False for p in patrol_names}
-                semi_final_races_completed = {p: False for p in patrol_names if p != "Exhibition"}
-                judging_active = True
-                save_data(CURRENT_RACE_ID)
-                logger.info('Created initial race data file for %s', CURRENT_RACE_ID)
-                return RaceContext(CURRENT_RACE_ID, participants, races, designs, judges,
-                                   initial_races_completed, semi_final_races_completed,
-                                   judging_active)
-        # store in in-memory cache for faster subsequent reads
-        try:
-            set_race_cached(CURRENT_RACE_ID, data)
-        except Exception:
-            logger.debug('Failed to set cache for race %s', CURRENT_RACE_ID)
+        if not data:
+            logger.warning("Creating new race in load_data")
+            data = create_race(name=name)
+            resave=True
+
+    context = RaceContext(
+        race_id=CURRENT_RACE_ID, 
+        name=data.get('name', name), 
+        participants=[], 
+        races=[], 
+        designs={}, 
+        judges=data.get('judges', {}),
+        initial_races_completed=data.get('initial_races_completed', {}), 
+        semi_final_races_completed=data.get('semi_final_races_completed', {}),
+        judging_active=data.get('judging_active', True), 
+        patrol_names=data.get('patrol_names', default_patrol_names))
 
     # Reconstruct participants, races, etc. from loaded data
-    participants = []
+    if not context.initial_races_completed or \
+        not context.semi_final_races_completed or \
+        len(context.initial_races_completed) != len(context.patrol_names) or \
+        len(context.semi_final_races_completed) != len(context.patrol_names):
+        resave = True
+        context.initial_races_completed = \
+            {p: False for p in context.patrol_names}
+        context.semi_final_races_completed = \
+            {p: False for p in context.patrol_names if p != 'Exhibition'}
+
     for p_data in data.get('participants', []):
         p = Participant(p_data.get('first_name'), p_data.get('last_name'), p_data.get('patrol'))
         p.__dict__.update(p_data)
-        participants.append(p)
+        context.participants.append(p)
 
-    races = []
     for r_data in data.get('races', []):
         r = Race(r_data.get('patrol'), int(r_data.get('race_number', 0)))
         r.__dict__.update(r_data)
@@ -596,39 +634,37 @@ def load_data(race_id=None):
                 except Exception:
                     lane_num = int(lane_num_str)
                 if p_id:
-                    p = next((p for p in participants if p.participant_id == p_id), None)
+                    p = next((p for p in context.participants if p.participant_id == p_id), None)
                     h.lanes[lane_num] = p
                 else:
                     h.lanes[lane_num] = None
             h.times = {int(k): float(t) for k, t in h_data.get('times', {}).items()}
             r.heats.append(h)
-        races.append(r)
+        context.races.append(r)
 
-    designs = {}
     for p_id, d_data in data.get('designs', {}).items():
-        participant = next((p for p in participants if p.participant_id == p_id), None)
+        participant = next((p for p in context.participants if p.participant_id == p_id), None)
         if participant:
             d = Design(participant)
             d.scores = d_data.get('scores', {})
-            designs[p_id] = d
-    for p in participants:
-        if p.participant_id not in designs:
+            context.designs[p_id] = d
+    for p in context.participants:
+        if p.participant_id not in context.designs:
             resave = True
-            designs[p.participant_id] = Design(p)
+            context.designs[p.participant_id] = Design(p)
 
-    judges = data.get('judges', {})
-    initial_races_completed = data.get('initial_races_completed', {p: False for p in patrol_names})
-    semi_final_races_completed = data.get('semi_final_races_completed', {p: False for p in patrol_names if p != 'Exhibition'})
-    judging_active = data.get('judging_active', True)
+    try:
+        session['current_race_id'] = context.race_id
+        session['current_race_name'] = context.name
+    except Exception:
+        logger.debug('Unable to set session current_race_id after firestore create')
 
     if resave:
-        save_data(CURRENT_RACE_ID)
+        save_data(CURRENT_RACE_ID, context=context)
 
-    return RaceContext(CURRENT_RACE_ID, participants, races, designs, judges,
-                        initial_races_completed, semi_final_races_completed,
-                        judging_active)
+    return context
 
-def save_data(race_id=None, context=None):
+def save_data(race_id=None, context: RaceContext=None):
     """Save current in-memory state to Firestore (if enabled) or to per-race JSON file."""
     if race_id is None:
         if context:
@@ -638,6 +674,7 @@ def save_data(race_id=None, context=None):
 
     if context:
         payload = {
+            # intentionally omitting 'name' to avoid overwriting
             'participants': [p.toJSON() for p in context.participants],
             'races': [r.toJSON() for r in context.races],
             'designs': {p_id: d.toJSON() for p_id, d in context.designs.items()},
@@ -645,18 +682,13 @@ def save_data(race_id=None, context=None):
             'judging_active': context.judging_active,
             'initial_races_completed': context.initial_races_completed,
             'semi_final_races_completed': context.semi_final_races_completed,
+            'patrol_names': context.patrol_names
         }
     else:
-        payload = {
-            'participants': [p.toJSON() for p in participants],
-            'races': [r.toJSON() for r in races],
-            'designs': {p_id: d.toJSON() for p_id, d in designs.items()},
-            'judges': judges,
-            'judging_active': judging_active,
-            'initial_races_completed': initial_races_completed,
-            'semi_final_races_completed': semi_final_races_completed,
-        }
+        logger.error('No context provided to save_data')
+        raise RuntimeError('Must provide context to save_data')
 
+    logger.info(f"Saving race {race_id}, {len(payload['participants'])} participants")
     try:
         write_race_doc(race_id=race_id, data=payload, merge=True)
     except Exception:
@@ -709,17 +741,19 @@ def ensure_race_loaded():
 
             if race_exists:
                 logger.info('Switching race to existing id %s', race_param)
-                load_data(race_param)
+                race_context = load_data(race_param)
                 try:
                     session['current_race_id'] = str(CURRENT_RACE_ID)
+                    session['current_race_name'] = str(race_context.name)
                 except Exception:
                     logger.debug('Unable to set session current_race_id')
             else:
                 if allowed_to_create:
                     logger.info(f'Authorized actor ({session_uid}/{fb_user}/{session_role}) creating new race id {race_param}; creating data.')
-                    load_data(race_param)
+                    race_context = load_data(race_param)
                     try:
                         session['current_race_id'] = str(CURRENT_RACE_ID)
+                        session['current_race_name'] = str(race_context.name)
                     except Exception:
                         logger.debug('Unable to set session current_race_id')
                 else:
@@ -781,11 +815,7 @@ def inject_current_race():
         race_qr = generate_qr(url, f'race-{rid}')
     return {'current_race_id': rid, 'current_race_name': name, 'current_race_qr': race_qr}
 
-
-# --- Admin UI and management endpoints ---
-@app.route('/admin/ui')
-@require_top_admin
-def admin_ui():
+def get_races_list():
     races_list = []
     if USE_FIRESTORE and FIRESTORE_AVAILABLE:
         try:
@@ -797,10 +827,23 @@ def admin_ui():
             logger.exception('Error listing races from firestore: %s', e)
     else:
         # find local files race_data_<id>.json
-        for f in os.listdir('.'):
+        for f in os.listdir(CONFIG_DIR):
             if f.startswith('race_data_') and f.endswith('.json'):
                 rid = f[len('race_data_'):-len('.json')]
-                races_list.append({'id': rid, 'name': rid})
+                with open(os.path.join(CONFIG_DIR, f)) as rf:
+                    try:
+                        data = json.load(rf)
+                        name = data.get('name', rid)
+                    except Exception:
+                        name = rid
+                races_list.append({'id': rid, 'name': name})
+    return races_list
+
+# --- Admin UI and management endpoints ---
+@app.route('/admin/ui')
+@require_top_admin
+def admin_ui():
+    races_list = get_races_list() 
     # Determine data mode for UI hint
     if USE_FIRESTORE:
         if FIRESTORE_AVAILABLE:
@@ -819,6 +862,8 @@ def admin_set_owner_token():
     # Generate and persist a per-race owner token and optionally a QR image
     race_id = request.form.get('race') or session.get('current_race_id') or CURRENT_RACE_ID
     token_val = uuid.uuid4().hex
+    if race_id == 'demo':
+        token_val = 'demo_token' # sample token for the demo race
     logger.info('Admin generating owner token for race %s', race_id)
     # persist owner token
     if not write_race_doc(race_id, {'owner_token': token_val}, merge=True):
@@ -841,7 +886,6 @@ def admin_set_owner_token():
         logger.debug('flash unavailable after creating owner token')
     # redirect back to the members page for the race so UI shows the new token/QR
     return redirect(url_for('admin_race_members', race_id=race_id))
-    
 
 
 @app.route('/admin/create_race', methods=['POST'])
@@ -850,67 +894,30 @@ def admin_create_race():
     # Accept either form or JSON body, but auto-generate a web-friendly race id
     json_body = request.get_json(silent=True) or {}
     name = (request.form.get('name') or json_body.get('name') or '').strip()
-    race_id = (request.form.get('raceId') or json_body.get('raceId') or '').strip()
     # If race_id not provided, derive from name
-    if not race_id:
-        if not name:
-            logger.warning('admin_create_race missing name/raceId; request path=%s', request.path)
-            return respond_error('Name is required to create a race', 400, 'admin_ui')
-        # create a simple URL-friendly id: keep alphanum, dash, underscore; replace other chars/spaces with underscore
-        rid = re.sub(r"[^A-Za-z0-9_-]+", '_', name)
-        rid = re.sub(r'_+', '_', rid).strip('_')
-        race_id = rid[:120] or name.replace(' ', '_')
-        url = request.url_root.rstrip('/') + url_for('index', race=race_id)
-        race_qr = generate_qr(url, f'race-{race_id}')
+    if not name:
+        logger.warning('admin_create_race missing name/raceId; request path=%s', request.path)
+        return respond_error('Name is required to create a race', 400, 'admin_ui')
+
+    payload = create_race(name)
+    race_id = payload['race_id']
 
     actor = getattr(request, 'fb_user', None) or {'uid': session.get('fb_uid'), 'email': session.get('fb_email'), 'role': session.get('role')}
     logger.info('admin_create_race requested by %s for race_id=%s name=%s', actor.get('uid') or actor.get('role'), race_id, name)
-
-    if USE_FIRESTORE and FIRESTORE_AVAILABLE:
-        try:
-            db = _gcf.Client()
-            db.collection('races').document(race_id).set({'name': name or race_id, 'race_qr': race_qr, 'createdAt': _gcf.SERVER_TIMESTAMP})
-            try:
-                session['current_race_id'] = race_id
-            except Exception:
-                logger.debug('Unable to set session current_race_id after firestore create')
-            try:
-                set_race_cached(race_id, {'name': name or race_id, 'race_qr': race_qr})
-            except Exception:
-                logger.debug('Failed to set cache after firestore create for %s', race_id)
-            return redirect(url_for('admin_ui'))
-        except Exception as e:
-            logger.exception('create race error: %s', e)
-            return 'error creating race', 500
-    else:
-        # create an empty per-race file (do NOT copy current in-memory state)
-        payload = {
-            'participants': [],
-            'races': [],
-            'designs': {},
-            'judges': {},
-            'judging_active': True,
-            'initial_races_completed': {p: False for p in patrol_names},
-            'semi_final_races_completed': {p: False for p in patrol_names if p != 'Exhibition'},
-        }
-        filename = data_filename_for_race(race_id)
-        try:
-            with open(filename, 'w') as f:
-                json.dump(payload, f, default=str)
-            logger.info('Created empty local race file %s', filename)
-            try:
-                session['current_race_id'] = race_id
-            except Exception:
-                logger.debug('Unable to set session current_race_id after local create')
-            try:
-                set_race_cached(race_id, payload)
-            except Exception:
-                logger.debug('Failed to set cache after creating local race %s', race_id)
-            return redirect(url_for('admin_ui'))
-        except Exception as e:
-            logger.exception('Failed to create local race file %s: %s', filename, e)
-            return 'error creating race', 500
-
+ 
+    try:
+        write_race_doc(race_id=race_id, data=payload, merge=True)
+    except Exception as e:
+        logger.debug('Failed to write race data %s', race_id)
+        logger.exception('create race error: %s', e)
+        return respond_error("Error creating race", 500, 'admin_ui', flash_category='error')
+    try:
+        set_race_cached(race_id, payload)
+    except Exception:
+        logger.debug('Failed to set cache after create for %s', race_id)
+        logger.exception('create race error: %s', e)
+        return respond_error("Error creating race", 500, 'admin_ui', flash_category='error')
+    return redirect(url_for('admin_ui'))
 
 @app.route('/admin/races/<race_id>/members', methods=['GET', 'POST'])
 def admin_race_members(race_id):
@@ -981,6 +988,12 @@ def admin_race_members(race_id):
                 judges_data.setdefault(regen_judge, {})['id'] = judges_data.get(regen_judge, {}).get('id') or uuid.uuid4().hex
                 url = request.url_root.rstrip('/') + url_for('judge_login', race=race_id, judge_token=token_val, judge_name=regen_judge)
                 try:
+                    qr=judges_data[regen_judge].get('qr', None)
+                    if qr:
+                        try:
+                            os.remove(os.path.join(app.static_folder, 'qr', qr))
+                        except Exception:
+                            logger.debug('Failed to remove QR file %s for removed judge %s', qr, remove_judge)
                     qr_fn = generate_qr(url, judges_data[regen_judge]['id'])
                     judges_data[regen_judge]['qr'] = qr_fn
                 except Exception:
@@ -1002,6 +1015,12 @@ def admin_race_members(race_id):
                 data = read_race_doc(race_id)
                 judges_data = data.get('judges', {})
                 if remove_judge in judges_data:
+                    qr=judges_data[remove_judge].get('qr', None)
+                    if qr:
+                        try:
+                            os.remove(os.path.join(app.static_folder, 'qr', qr))
+                        except Exception:
+                            logger.debug('Failed to remove QR file %s for removed judge %s', qr, remove_judge)
                     judges_data.pop(remove_judge, None)
                 if not write_race_doc(race_id, {'judges': judges_data}, merge=True):
                     raise RuntimeError('Failed to persist judges data')
@@ -1268,12 +1287,12 @@ def judge_login():
 def login():
     owner_token = request.args.get("owner_token", None)
     judge_token = request.args.get("judge_token", None)
-    return render_template("login.html", owner_token=owner_token, judge_token=judge_token )
+    return render_template("login.html", owner_token=owner_token, judge_token=judge_token, races_list=get_races_list() )
 
 
-@app.route("/race_qr_code")
-def race_qr_code():
-    return render_template("race_qr_code.html")
+@app.route("/race_links")
+def race_links():
+    return render_template("race_links.html", races_list=get_races_list())
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -1284,7 +1303,7 @@ def index(race_context: RaceContext):
         last_name = request.form.get("last_name")  # Get last name
         try:
             patrol = request.form.get("patrol") # Get patrol
-            if patrol in patrol_names:
+            if patrol in race_context.patrol_names:
                 add_participant(first_name, last_name, patrol, race_context=race_context)  # Add participant
                 save_data(context=race_context) # Save data after adding participant
                 return redirect(url_for("index"))  # Redirect after successful addition
@@ -1298,7 +1317,7 @@ def index(race_context: RaceContext):
 
     return render_template("index.html", 
                            participants=sorted_participants, 
-                           patrol_names=patrol_names)
+                           patrol_names=race_context.patrol_names)
 
 @app.route("/edit_participant/<participant_id>", methods=["GET", "POST"])
 @require_race_context
@@ -1327,7 +1346,7 @@ def edit_participant(participant_id, race_context: RaceContext):
             logger.warning('edit_participant invalid weight input for participant_id=%s value=%s', participant_id, request.form.get('car_weight_oz'))
             return respond_error ("Invalid weight input. Please enter a number.", 400, "edit_participant", {"participant_id": participant_id})
 
-    return render_template("edit_participant.html", participant=participant, patrol_names = patrol_names)
+    return render_template("edit_participant.html", participant=participant, patrol_names = race_context.patrol_names)
 
 @app.route("/delete_participant/<participant_id>", methods=["POST"])
 @require_race_context
@@ -1352,20 +1371,20 @@ def participant_times(participant_id, race_context: RaceContext):
     if not participant:
         logger.warning('participant_times: participant not found id=%s', participant_id)
         return respond_error("Participant not found", 404, "index")
-    return render_template("participant_times.html", participant=participant, patrol_names=patrol_names)
+    return render_template("participant_times.html", participant=participant, patrol_names=race_context.patrol_names)
 
 @require_race_context
 def add_participant(first_name,last_name, patrol, race_context: RaceContext):
 
-    if patrol in patrol_names.values():
-        for k,v in patrol_names.items():
+    if patrol in race_context.patrol_names.values():
+        for k,v in race_context.patrol_names.items():
             if v == patrol:
                 patrol = k
                 break
 
     patrol = str(patrol)
 
-    if patrol in patrol_names:
+    if patrol in race_context.patrol_names:
 
         new_p = Participant(first_name,last_name, patrol)
 
@@ -1377,7 +1396,7 @@ def add_participant(first_name,last_name, patrol, race_context: RaceContext):
             next_car_number = 1  # Start at 1 if no existing numbers
 
         new_p.car_number = next_car_number
-        new_p.car_name = f"{patrol_names.get(patrol)[:1]}{next_car_number:02}"
+        new_p.car_name = f"{race_context.patrol_names.get(patrol)[:1]}{next_car_number:02}"
 
         race_context.participants.append(new_p)
 
@@ -1387,7 +1406,7 @@ def add_participant(first_name,last_name, patrol, race_context: RaceContext):
         return new_p
     else:
         logger.warning(f"Attempted to add participant {id}/{first_name} {last_name} with invalid patrol: {patrol}")
-        raise ValueError(f"Invalid Patrol: {patrol}, valid options are: {', '.join(list(patrol_names.values()))}")
+        raise ValueError(f"Invalid Patrol: {patrol}, valid options are: {', '.join(list(race_context.patrol_names.values()))}")
 
 @require_race_context
 def clear_races(race_context: RaceContext):
@@ -1404,7 +1423,7 @@ def clear_races(race_context: RaceContext):
 def schedule_initial_races(race_context: RaceContext):
 
     race_number = 1
-    for patrol in patrol_names:
+    for patrol in race_context.patrol_names:
         patrol_racers = [p for p in race_context.participants if p.patrol == patrol]
 
         if patrol_racers:
@@ -1432,7 +1451,7 @@ def schedule_semi_final_races(patrol, race_context: RaceContext):
 
     if top_racers:
         race_groups = [name_sorted_top_racers]  # Create a single group of top racers
-        assign_paired_lanes(race_groups, Rounds.SEMI, len(race_context.races) + 1) 
+        assign_paired_lanes(race_groups, Rounds.SEMI, len(race_context.races) + 1, race_context=race_context) 
 
 @require_race_context
 def schedule_final_races(race_context: RaceContext):
@@ -1441,7 +1460,7 @@ def schedule_final_races(race_context: RaceContext):
 
     # 1. Get Top Racers from Semi-Finals:
     top_racers = []
-    for patrol in patrol_names:
+    for patrol in race_context.patrol_names:
         if patrol != "Exhibition" and race_context.semi_final_races_completed.get(patrol, False):  # Check if semi-finals are complete
             top_racer,_ = get_top_racers(Rounds.SEMI, patrol, 1, race_context=race_context) # Only want to get top 1
             if top_racer:
@@ -1450,7 +1469,7 @@ def schedule_final_races(race_context: RaceContext):
     # 2. Create Final Race (using all lanes assignment):
     if top_racers: # Only if there are top racers
         race_groups = [top_racers]
-        assign_all_lanes(race_groups, Rounds.FINAL, len(races) + 1, race_context=race_context)  # Use assign_all_lanes
+        assign_all_lanes(race_groups, Rounds.FINAL, len(race_context.races) + 1, race_context=race_context)  # Use assign_all_lanes
 
 @require_race_context
 def get_top_racers(round: Rounds, patrol = None, racer_count=NUM_LANES, race_context: RaceContext = None):
@@ -1517,10 +1536,12 @@ def assign_paired_lanes(groups, round: Rounds, race_number_start, race_context: 
             # i.e. 0,1,2,3 then 1,0,3,2 for 4 lanes
             if heat_num == 1:
                 for lane in range(NUM_LANES):
-                    heat.lanes[lane+1] = grp[lane] if grp[lane] else None
+                    if lane < len(grp):
+                        heat.lanes[lane+1] = grp[lane] if grp[lane] else None
             else:
                 for lane in range(NUM_LANES):
-                    heat.lanes[swapped_lanes[lane]+1]=grp[lane] if grp[lane] else None
+                    if lane < len(grp):
+                        heat.lanes[swapped_lanes[lane]+1]=grp[lane] if grp[lane] else None
             race.heats.append(heat)
         race_context.races.append(race)
 
@@ -1591,7 +1612,7 @@ def enter_times(race_number, heat_number, race_context:  RaceContext):
                         participant = heat.lanes.get(lane)
                         if participant:
                             participant.times.append(time)
-                            calculate_race_statistics(participant)
+                            calculate_race_statistics(participant, race_context=race_context)
                         entered_count += 1
                     except ValueError:
                         orig = request.form.get(time_key)
@@ -1610,7 +1631,7 @@ def enter_times(race_number, heat_number, race_context:  RaceContext):
             else:
                 next_race_number = race.race_number
                 next_heat_number = heat_number + 1
-                if next((r for r in races if r.race_number == next_race_number), None) == None:
+                if next((r for r in race_context.races if r.race_number == next_race_number), None) == None:
                     next_race_number = None
                     next_heat_number = None
                     
@@ -1642,7 +1663,7 @@ def check_races_scheduled(patrol, round, race_context: RaceContext):
 
 @require_race_context
 def check_round_complete(round, race_context: RaceContext):
-    for p in patrol_names:
+    for p in race_context.patrol_names:
         if p == "Exhibition":
             race_context.semi_final_races_completed[p] = True
         else:
@@ -1705,23 +1726,26 @@ def schedule(race_context: RaceContext):
     elif selected_round == Rounds.FINAL:
         selected_round_name = "Finals"
 
-    check_round_complete(Rounds.FIRST)
-    check_round_complete(Rounds.SEMI)
+    check_round_complete(Rounds.FIRST, race_context=race_context)
+    check_round_complete(Rounds.SEMI, race_context=race_context)
 
-    top_racers, overall_racer_averages = get_top_racers(selected_round, selected_patrol, NUM_LANES)
+    top_racers, overall_racer_averages = get_top_racers(selected_round, selected_patrol, NUM_LANES, race_context=race_context)
 
     if race_context.semi_final_races_completed:
         all_semi_final_races_completed = all([v for k,v in race_context.semi_final_races_completed.items() if k != "Exhibition"])
     else:
         all_semi_final_races_completed = False
-    semi_final_races_scheduled = {p: check_races_scheduled(p, Rounds.SEMI) for p in patrol_names}
+    semi_final_races_scheduled = {p: check_races_scheduled(p, Rounds.SEMI, race_context=race_context) for p in race_context.patrol_names}
 
-    return render_template("schedule.html", races=race_context.races, patrol_names=patrol_names,
+    return render_template("schedule.html", 
+                           races=race_context.races, 
+                           patrol_names=race_context.patrol_names,
                            selected_patrol=selected_patrol, 
                            selected_round=selected_round,
                            selected_round_value=selected_round.value,
                            selected_round_name = selected_round_name, 
-                           Rounds=Rounds, NUM_LANES=NUM_LANES,
+                           Rounds=Rounds, 
+                           NUM_LANES=NUM_LANES,
                            top_racers=list(enumerate(top_racers)),
                            overall_racer_averages=overall_racer_averages,
                            initial_races_completed=race_context.initial_races_completed,
@@ -1748,22 +1772,22 @@ def calculate_race_averages(race):
 
     return racer_averages
 
-def calculate_race_statistics(participant):
+def calculate_race_statistics(participant, race_context: RaceContext):
     p = participant
     if p.times:
         p.best_time = min(p.times)
         p.average_time = sum(p.times) / len(p.times)
-        p.best_time_race_number = get_best_time_race_number(p)
+        p.best_time_race_number = get_best_time_race_number(p, race_context=race_context)
     else:
         p.best_time = float('inf')
         p.average_time = 0
         p.best_time_race_number = None
 
-def get_best_time_race_number(participant):
+def get_best_time_race_number(participant, race_context: RaceContext):
     best_time_race_number = None
     if participant.times:
         if participant.best_time > 0:
-            for race in races:
+            for race in race_context.races:
                 for heat in race.heats:
                     for lane,p in heat.lanes.items():
                         if p == participant and lane in heat.times and \
@@ -1783,7 +1807,7 @@ def judge_design(race_context: RaceContext):
     judge_id = judges_data[judge_name]['id'] if judge_name else None
 
     racers = {}
-    for patrol in patrol_names:
+    for patrol in race_context.patrol_names:
         racers[patrol] = [p for p in race_context.participants if p.patrol == patrol]
 
     good = True
@@ -1800,10 +1824,10 @@ def judge_design(race_context: RaceContext):
         for p in race_context.participants:
             rank = request.form.get(f"rank_{p.participant_id}", 0)
             race_context.designs[p.participant_id].scores[judge_id] = int(rank)
-        save_data()
+        save_data(race_id=race_id, context=race_context)
         return redirect(url_for("design_results"))
 
-    return render_template("judge_design.html", racers=racers, patrol_names=patrol_names,
+    return render_template("judge_design.html", racers=racers, patrol_names=race_context.patrol_names,
                             judge_id=judge_id, designs=race_context.designs, judge_name=judge_name, 
                             judging_active=race_context.judging_active)
 
@@ -1846,7 +1870,7 @@ def design_results(race_context: RaceContext):
 
     sorted_scores_by_patrol = {}
 
-    for patrol in patrol_names:
+    for patrol in race_context.patrol_names:
         patrol_scores = []
         for p in race_context.participants:
             if p.patrol == patrol:
@@ -1860,7 +1884,7 @@ def design_results(race_context: RaceContext):
         
 
     return render_template("design_results.html", 
-                           patrol_names=patrol_names, 
+                           patrol_names=race_context.patrol_names, 
                            sorted_scores_by_patrol=sorted_scores_by_patrol,
                            judging_active=race_context.judging_active)
 
@@ -1871,10 +1895,10 @@ def display_results(race_context: RaceContext):
     valid_participants = [p for p in race_context.participants if p.times]
     sorted_participants = sorted(valid_participants, key=lambda x: (x.average_time, x.best_time))
     for p in sorted_participants:
-        calculate_race_statistics(p)
+        calculate_race_statistics(p, race_context=race_context)
     return render_template("results.html", 
                            participants=sorted_participants, 
-                           patrol_names=patrol_names)
+                           patrol_names=race_context.patrol_names)
 
 @app.route("/download_results")
 @require_race_context
@@ -1886,7 +1910,7 @@ def download_results(race_context: RaceContext):
     writer.writerow(["Name", "Patrol", "Car Number", "Car Name", "Average Time", "Top Time", "Top Time Race #"])
 
     for p in race_context.participants:  # Assuming participants is your list of racers
-        writer.writerow([p.first_name + " " + p.last_name, patrol_names.get(p.patrol), p.car_number, p.car_name, p.average_time, p.best_time, p.best_time_race_number])
+        writer.writerow([p.first_name + " " + p.last_name, race_context.patrol_names.get(p.patrol), p.car_number, p.car_name, p.average_time, p.best_time, p.best_time_race_number])
 
     return Response(
         output.getvalue(),
@@ -1896,8 +1920,9 @@ def download_results(race_context: RaceContext):
 
 
 @app.route("/download_racer_data/<participant_id>")
-def download_racer_data(participant_id):
-    participant = next((p for p in participants if p.participant_id == participant_id), None)
+@require_race_context
+def download_racer_data(participant_id, race_context: RaceContext):
+    participant = next((p for p in race_context.participants if p.participant_id == participant_id), None)
     if not participant:
         logger.warning('download_racer_data: participant not found id=%s', participant_id)
         return "Participant not found", 404
@@ -1909,7 +1934,7 @@ def download_racer_data(participant_id):
     writer.writerow(["Race #", "Time"])  # Customize headers as needed
 
     for i, time in enumerate(participant.times):
-        race_number = next((race.race_number for race in races for heat in race.heats for lane, p in heat.lanes.items() if p == participant and i < len(heat.times) and heat.times[lane] == time), None)
+        race_number = next((race.race_number for race in race_context.races for heat in race.heats for lane, p in heat.lanes.items() if p == participant and i < len(heat.times) and heat.times[lane] == time), None)
         writer.writerow([race_number, time])
 
     return Response(
@@ -1938,8 +1963,8 @@ def upload_roster():
                 try:
                     # Load from memory
                     csv_file = file.stream.read().decode('utf-8')
-                    load_roster_from_memory(csv_file) # See function below
-                    save_data() # Save data after loading roster
+                    race_context = load_roster_from_memory(csv_file) # See function below
+                    save_data(context=race_context) # Save data after loading roster
                     logger.info('Roster uploaded successfully by uid=%s filename=%s', session.get('fb_uid') or session.get('role'), file.filename)
                     flash('Roster uploaded successfully!')
                     return redirect(url_for('index')) # Redirect to your main page
@@ -1957,11 +1982,14 @@ def upload_roster():
 
     return render_template("upload_roster.html", error_message="")
 
-def load_roster_from_memory(csv_string):
+@require_race_context
+def load_roster_from_memory(csv_string, race_context: RaceContext):
     csvfile = StringIO(csv_string)
     reader = csv.DictReader(csvfile)
+    num_loaded = 0
     for row in reader:
-        p = add_participant(row["First Name"], row["Last Name"], row["Patrol"])
+        num_loaded += 1
+        p = add_participant(row["First Name"], row["Last Name"], row["Patrol"], race_context=race_context)
         logger.debug('Loaded roster row added participant id=%s name=%s %s patrol=%s', p.participant_id, p.first_name, p.last_name, p.patrol)
         if "car_weight_oz" in row and row['car_weight_oz'].strip() != "":
             try:
@@ -1972,16 +2000,19 @@ def load_roster_from_memory(csv_string):
                     raise ValueError("Negative weight")
             except ValueError:
                 logger.warning("Invalid car_weight_oz: %s", row.get('car_weight_oz'))  # Log the error
+    logger.info(f"Loaded {num_loaded} participants from roster upload.")
+    return race_context
 
 @app.route("/download_roster_template")
-def download_roster_template():
+@require_race_context
+def download_roster_template(race_context: RaceContext):
     output = StringIO()
     writer = csv.writer(output)
     writer.writerow(["First Name", "Last Name", "Patrol", "car_weight_oz"]) # Header row
-    for patrol in patrol_names.values():
+    for patrol in race_context.patrol_names.values():
         writer.writerow(["", "", patrol, ""])  # Empty rows for each patrol
-    for p in participants:
-        writer.writerow([p.first_name, p.last_name, patrol_names[p.patrol], p.car_weight_oz])
+    for p in race_context.participants:
+        writer.writerow([p.first_name, p.last_name, race_context.patrol_names[p.patrol], p.car_weight_oz])
     return Response(
         output.getvalue(),
         mimetype="text/csv",
@@ -1989,20 +2020,24 @@ def download_roster_template():
     )
 
 @app.route("/api/participants")
-def api_participants():
-    return jsonify([p.toJSON() for p in participants])
+@require_race_context
+def api_participants(race_context: RaceContext):
+    return jsonify([p.toJSON() for p in race_context.participants])
 
 @app.route("/api/patrol_names")
-def api_patrol_names():
-    return jsonify(patrol_names)
+@require_race_context
+def api_patrol_names(race_context: RaceContext):
+    return jsonify(race_context.patrol_names)
 
 @app.route("/api/races")
-def api_races():
-    return jsonify([r.toJSON() for r in races])
+@require_race_context
+def api_races(race_context: RaceContext):
+    return jsonify([r.toJSON() for r in race_context.races])
 
 @app.route("/api/designs")
-def api_designs():
-    return jsonify({p: d.toJSON() for p, d in designs.items()})
+@require_race_context
+def api_designs(race_context: RaceContext):
+    return jsonify({p: d.toJSON() for p, d in race_context.designs.items()})
 
 @app.errorhandler(404)
 def page_not_found(e):

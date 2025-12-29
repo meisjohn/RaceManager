@@ -45,6 +45,19 @@
                     <a href="/logout" class="button is-warning">Logout</a>
                 </div>
             {% endif %}
+
+            {% if races_list %}
+                <section class="section">
+                    <h1 class="title is-4">Links for All Races</h1>
+                    <ul>
+                    {% for race in races_list %}
+                        {% set race_url = request.url_root.rstrip('/') + url_for('index', race=race.id) %}
+                        <li><p class="is-size-4"><strong>Race: {{ race.name }} - </strong><a href="{{ race_url }}">{{ race_url }}</a></p></li>
+                    {% endfor %}
+                    </ul>
+                </section>
+            {% endif %}
+
         </div>
     </section>
 {% endblock %}

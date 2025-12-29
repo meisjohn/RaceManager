@@ -15,7 +15,8 @@
   color: #ffffff !important;
 }
 .navbar-burger.hover span,
-.navbar-burger.is-active span {
+.navbar-burger.is-active span,
+.navbar-burger.is-focused span{
   background-color: #ffffff !important;
   color: #000000 !important;
 }
@@ -25,7 +26,8 @@ button {
     transition: transform 0.2s ease, box-shadow 0.2s ease, outline-color 0.2s ease;
 }
 
-.button:hover {
+.button:hover, 
+.button:focus {
     transform: translateY(-2px); /* Lifts the button slightly */
     outline-color:invert(20%); /* Invert outline color on hover */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Adds depth */
