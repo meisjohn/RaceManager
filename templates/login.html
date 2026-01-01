@@ -2,19 +2,24 @@
 {% block content %}
     <section class="section">
         <div class="container">
-            {% if error_message %}
-                <p class="notification is-danger">{{ error_message }}</p>
-            {% endif %}
-
             <h1 class="title">Log in with Token</h1>
             {% if not session['role'] %}
                 <section class="section">
-                    <h2 class="title is-4"> Owner Login</h2>
                     <div class="field">
-                        <form method="POST" action="/owner_login">
-                            <label class="label" for="owner_token">Owner Token:</label>
+                        <form method="POST" action="/login">
+                            <label class="label" for="token">Token:</label>
                             <div class="control">
-                                <input class="input" type="text" name="owner_token" {% if owner_token %} value="{{ owner_token }}" {% endif %}>
+                                <input class="input" type="text" name="token" placeholder="enter owner or judge token">
+                            </div>
+                            <label class="label" for="race">Race:</label>
+                            <div class="control">
+                                <div class="select">
+                                    <select name="race">
+                                        {% for r in races_list %}
+                                            <option value="{{ r.id }}">{{ r.name }} ({{ r.id }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
                             </div>
                             <div class="control">
                                 <input class="button is-primary" type="submit" value="Login">
@@ -22,20 +27,58 @@
                         </form>
                     </div>
                 </section>
+
+                {% if firebase_config %}
+                <hr>
+
                 <section class="section">
-                    <h2 class="title is-4"> Judge Login</h2>
-                    <div class="field">
-                        <form method="POST" action="/judge_login">
-                            <label class="label" for="judge_token">Judge Token:</label>
-                            <div class="control">
-                                <input class="input" type="text" name="judge_token" {% if judge_token %} value="{{ judge_token }}" {% endif %}>
+                    <h2 class="title is-4">Sign in with email/Google</h2>
+                    <div class="box">
+                        <div class="notification is-light">
+                            <button class="delete"></button>
+                            <strong><i>Optional:</i></strong> Login is optional and used for administration only.
+                        </div>
+                        <div id="firebase-auth-ui">
+                            <div class="field">
+                                <label class="label">Email</label>
+                                <div class="control"><input id="email" class="input" type="email" placeholder="you@example.com"></div>
                             </div>
-                            <div class="control">
-                                <input class="button is-primary" type="submit" value="Login">
+                            <div class="field">
+                                <label class="label">Password</label>
+                                <div class="control"><input id="password" class="input" type="password" placeholder="password"></div>
                             </div>
-                        </form>
+                            <div class="field">
+                                <div class="control">
+                                    <button id="emailSignIn" class="button is-link">Sign in with Email</button>
+                                    <button id="emailSignUp" class="button is-light">Create Account</button>
+                                </div>
+                            </div>
+                            <div class="is-divider" data-content="OR"></div>
+                            <div class="field">
+                                <div class="control">
+                                    <button id="googleSignIn" class="button is-fullwidth is-danger is-outlined">
+                                        <span class="icon"><i class="fab fa-google"></i></span>
+                                        <span>Sign in with Google</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label class="label" for="firebase_race">Race:</label>
+                                <div class="control">
+                                    <div class="select">
+                                        <select id="firebase_race">
+                                            {% for r in races_list %}
+                                                <option value="{{ r.id }}">{{ r.name }} ({{ r.id }})</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="firebase-message" class="notification is-hidden"></div>
+                        </div>
                     </div>
                 </section>
+                {% endif %}
             {% endif %}
 
             {% if session['role'] %}
@@ -52,7 +95,7 @@
                     <ul>
                     {% for race in races_list %}
                         {% set race_url = request.url_root.rstrip('/') + url_for('index', race=race.id) %}
-                        <li><p class="is-size-4"><strong>Race: {{ race.name }} - </strong><a href="{{ race_url }}">{{ race_url }}</a></p></li>
+                        <li><p class="is-size-4"><strong>{{ race.name }} - </strong><a href="{{ race_url }}">{{ race_url }}</a></p></li>
                     {% endfor %}
                     </ul>
                 </section>
@@ -60,4 +103,68 @@
 
         </div>
     </section>
+    {% if firebase_config %}
+        <script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-app-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-auth-compat.js"></script>
+
+        <script>
+            const firebaseConfig = {{ firebase_config | tojson | safe }};
+            firebase.initializeApp(firebaseConfig);
+
+            const messageEl = document.getElementById('firebase-message');
+            function showMsg(text, type) {
+                messageEl.innerText = text;
+                messageEl.className = `notification mt-4 ${type}`;
+                messageEl.classList.remove('is-hidden');
+            }
+
+            async function handleAuthResponse(user) {
+                const idToken = await user.getIdToken();
+                const race = document.getElementById('firebase_race').value;
+                
+                const res = await fetch(`/session_login?race=${encodeURIComponent(race)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ idToken })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    window.location.href = data.isTopAdmin ? '/admin/ui' : '/?race=' + race;
+                } else {
+                    const data = await res.json();
+                    showMsg('Server failed to verify session: ' + data.message, 'is-danger');
+                }
+            }
+
+            // Email Sign In
+            document.getElementById('emailSignIn').addEventListener('click', async () => {
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                try {
+                    const res = await firebase.auth().signInWithEmailAndPassword(email, password);
+                    await handleAuthResponse(res.user);
+                } catch (err) { showMsg(err.message, 'is-danger'); }
+            });
+
+            // Email Sign Up
+            document.getElementById('emailSignUp').addEventListener('click', async () => {
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                try {
+                    const res = await firebase.auth().createUserWithEmailAndPassword(email, password);
+                    await handleAuthResponse(res.user);
+                } catch (err) { showMsg(err.message, 'is-danger'); }
+            });
+
+            // Google Sign In
+            document.getElementById('googleSignIn').addEventListener('click', async () => {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                try {
+                    const res = await firebase.auth().signInWithPopup(provider);
+                    await handleAuthResponse(res.user);
+                } catch (err) { showMsg(err.message, 'is-danger'); }
+            });
+        </script>
+    {% endif %}
 {% endblock %}

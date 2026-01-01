@@ -11,7 +11,7 @@
         <div class="level">
           <div class="level-left">
             <div>Signed in: <strong>{{ session.get('fb_email') or session.get('role') or 'unknown' }}</strong></div>
-            <div style="margin-left:1rem;">Mode: <span class="tag is-light">{{ data_mode }}</span></div>
+            <div style="margin-left:1rem;">Mode: <span class="tag is-text">{{ data_mode }}</span></div>
           </div>
           <div class="level-right">
             <a class="button is-light" href="/logout">Logout</a>
@@ -21,7 +21,8 @@
         <div class="columns">
           <div class="column is-two-thirds">
             <div class="box">
-              <h2 class="subtitle">Existing Races</h2>
+              <h2 class="subtitle">Existing Races<i><small> ({{visible_races}} of {{total_races}})</small></i></h2>
+              
               <table class="table is-fullwidth is-striped">
                 <thead>
                   <tr><th>Race ID</th><th>Name</th><th>Actions</th></tr>
@@ -30,10 +31,28 @@
                   {% for r in races %}
                   <tr>
                     <td>{{ r.id }}</td>
-                    <td>{{ r.name }}</td>
+                    <td>{{ r.name }} {% if r.archived %}<span class="tag is-danger">Archived</span>{% endif %}</td>
                     <td>
                       <a class="button is-small is-info" href="{{ url_for('admin_race_members', race_id=r.id) }}">Members</a>
                       <a class="button is-small" href="/?race={{ r.id }}">Open</a>
+                      <form style="display:inline" method="post" action="{{ url_for('admin_download_race') }}?race={{ r.id }}">
+                        <button class="button is-small is-primary" type="submit">Download</button>
+                      </form>
+                      {% if not r.archived %}
+                        <form style="display:inline" method="post" action="{{ url_for('admin_archive_race') }}">
+                          <input type="hidden" name="race" value="{{ r.id }}">
+                          <button class="button is-small is-warning" type="submit">Archive</button>
+                        </form>
+                      {% else %}
+                        <form style="display:inline" method="post" action="{{ url_for('admin_restore_race') }}">
+                          <input type="hidden" name="race" value="{{ r.id }}">
+                          <button class="button is-small is-success" type="submit">Restore</button>
+                        </form>
+                        <form style="display:inline" method="post" action="{{ url_for('admin_delete_race') }}" onsubmit="return confirm('Are you sure you want to permanently delete this race?');">
+                          <input type="hidden" name="race" value="{{ r.id }}">
+                          <button class="button is-small is-danger" type="submit">Delete</button>
+                        </form>
+                      {% endif %}
                     </td>
                   </tr>
                   {% endfor %}
@@ -44,12 +63,41 @@
 
           <div class="column">
             <div class="box">
+              <h2 class="subtitle">Import Race</h2>
+              <form method="post" action="{{ url_for('admin_upload_restore') }}" enctype="multipart/form-data">
+                <div class="field">
+                  <label class="label">Race File (JSON)</label>
+                  <div class="control">
+                    <input class="input" type="file" name="file" accept=".json" required>
+                  </div>
+                </div>
+                <div class="field">
+                  <label class="label">Race Name (Optional if included in file)</label>
+                  <div class="control">
+                    <input class="input" name="race_name" placeholder="Override Race ID">
+                  </div>
+                </div>
+                <div class="field">
+                  <div class="control">
+                    <button class="button is-warning" type="submit">Import</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            <div class="box">
               <h2 class="subtitle">Create Race</h2>
               <form method="post" action="{{ url_for('admin_create_race') }}">
                 <div class="field">
                   <label class="label">Display Name</label>
                   <div class="control">
                     <input class="input" name="name" placeholder="Display name (e.g. PA 1249 2026)">
+                  </div>
+                </div>
+                <div class="field">
+                  <label class="label">Owner Token (optional)</label>
+                  <div class="control">
+                    <input class="input" name="owner_token" placeholder="optional owner token to assign at creation">
                   </div>
                 </div>
                 <div class="field">

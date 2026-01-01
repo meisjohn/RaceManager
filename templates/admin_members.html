@@ -4,32 +4,64 @@
 <div class="container">
   <h1 class="title">Admin — Members for {{ race_id }}</h1>
 
+  {% if archived: %}
+      {% set disabled='disabled' %}
+  {% else %}
+      {% set disabled='' %}
+  {% endif %}
+
+
   <div class="columns">
     <div class="column is-two-thirds">
       <!-- Members and Judges forms/tables -->
       <section class="box">
         <h2 class="subtitle">Members</h2>
+        
+        <form method="post" class="field has-addons mb-4">
+          <div class="control">
+            <input class="input" type="email" name="email" placeholder="User Email" {{disabled}}>
+          </div>
+          <div class="control">
+            <input class="input" type="text" name="uid" placeholder="OR Firebase UID" {{disabled}}>
+          </div>
+          <div class="control">
+            <div class="select">
+              <select name="role" {{disabled}}>
+                <option value="VIEWER">Viewer</option>
+                <option value="JUDGE">Judge</option>
+                <option value="OWNER">Owner</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+            </div>
+          </div>
+          <div class="control">
+            <button class="button is-primary" type="submit" {{disabled}}>Add/Update Member</button>
+          </div>
+        </form>
+
         <table class="table is-fullwidth is-hoverable">
-          <thead><tr><th>UID</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+          <thead><tr><th>UID</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>
             {% for uid, data in members.items() %}
               {% set role = data.role if data.role else data.get('role') %}
+              {% set email = data.email if data.email is defined else data.get('email', '') %}
               {% set deleted = data.deleted if data.deleted is defined else data.get('deleted') %}
               {% set deletedAt = data.deletedAt if data.deletedAt is defined else data.get('deletedAt') %}
               <tr>
                 <td>{{ uid }}</td>
+                <td>{{ email }}</td>
                 <td>{{ role }}</td>
                 <td>{% if deleted %}<span class="tag is-danger">Deleted</span> {{ deletedAt }}{% else %}<span class="tag is-success">Active</span>{% endif %}</td>
                 <td>
                   {% if deleted %}
                     <form method="post" style="display:inline" action="{{ url_for('admin_race_members', race_id=race_id) }}">
-                      <input type="hidden" name="restore_uid" value="{{ uid }}">
-                      <button class="button is-small is-warning" type="submit">Restore</button>
+                      <input type="hidden" name="restore_uid" value="{{ uid }}" {{disabled}}>
+                      <button class="button is-small is-warning" type="submit" {{disabled}}>Restore</button>
                     </form>
                   {% else %}
                     <form method="post" style="display:inline" action="{{ url_for('admin_race_members', race_id=race_id) }}">
-                      <input type="hidden" name="delete_uid" value="{{ uid }}">
-                      <button class="button is-small is-danger" type="submit">Remove</button>
+                      <input type="hidden" name="delete_uid" value="{{ uid }}" {{disabled}}>
+                      <button class="button is-small is-danger" type="submit" {{disabled}}>Remove</button>
                     </form>
                   {% endif %}
                 </td>
@@ -43,28 +75,33 @@
         <h2 class="subtitle">Judges</h2>
         <form method="post" class="field has-addons">
           <div class="control">
-            <input class="input" type="text" name="regen_judge" placeholder="Judge name to create/regenerate">
+            <input class="input" type="text" name="regen_judge" placeholder="Judge name to create/regenerate" {{disabled}}>
           </div>
           <div class="control">
-            <button class="button is-primary" type="submit">Create / Regenerate Judge</button>
+            <button class="button is-primary" type="submit"{{disabled}}>Create / Regenerate Judge</button>
           </div>
         </form>
 
         <table class="table is-fullwidth">
-          <thead><tr><th>Judge</th><th>Token</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Judge</th><th>Token</th><th>Votes Cast</th><th>Actions</th></tr></thead>
           <tbody>
             {% for jname, jinfo in judges.items() %}
             <tr>
               <td>{{ jname }}</td>
               <td>{{ jinfo.token }}</td>
+              {% if jinfo.voted %}
+                <td>Yes</td>
+              {% else %}
+                <td>No</td>
+              {% endif %}
               <td>
                 <form method="post" style="display:inline">
-                  <input type="hidden" name="regen_judge" value="{{ jname }}">
-                  <button class="button is-small is-info">Regenerate</button>
+                  <input type="hidden" name="regen_judge" value="{{ jname }}" {{disabled}}>
+                  <button class="button is-small is-info" {{disabled}}>Regenerate</button>
                 </form>
                 <form method="post" style="display:inline" onsubmit="return confirm('Remove judge {{ jname }}?');">
-                  <input type="hidden" name="remove_judge" value="{{ jname }}">
-                  <button class="button is-small is-danger">Remove</button>
+                  <input type="hidden" name="remove_judge" value="{{ jname }}" {{disabled}}>
+                  <button class="button is-small is-danger" {{disabled}}>Remove</button>
                 </form>
               </td>
             </tr>
@@ -87,14 +124,14 @@
             </a></p>
             <p><strong>Owner token:</strong> <code>{{ owner_token }}</code></p>
             <form method="post" action="{{ url_for('admin_set_owner_token') }}">
-              <input type="hidden" name="race" value="{{ race_id }}">
-              <button class="button is-small is-warning" type="submit">Rotate Owner Token</button>
+              <input type="hidden" name="race" value="{{ race_id }}" {{disabled}}>
+              <button class="button is-small is-warning" type="submit" {{disabled}}>Rotate Owner Token</button>
             </form>
           {% else %}
             <p>No owner token/QR set for this race.</p>
             <form method="post" action="{{ url_for('admin_set_owner_token') }}">
-              <input type="hidden" name="race" value="{{ race_id }}">
-              <button class="button is-small is-primary" type="submit">Generate Owner Token & QR</button>
+              <input type="hidden" name="race" value="{{ race_id }}" {{disabled}}>
+              <button class="button is-small is-primary" type="submit" {{disabled}}>Generate Owner Token & QR</button>
             </form>
           {% endif %}
         </div>

@@ -8,7 +8,7 @@
                 <p class="notification is-danger">{{ error_message }}</p>
             {% endif %}
 
-            {% if session['role'] == "OWNER" %}
+            {% if session['role'] == "OWNER" or session['role'] == "ADMIN" %}
                 {% with messages = get_flashed_messages() %}
                     {% if messages %}
                         <ul class="notification is-info">

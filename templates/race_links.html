@@ -20,12 +20,13 @@
 
             {% if races_list %}
                 <section class="section">
-                    <h1 class="title">Links for All Races</h1>
+                    <h1 class="title is-4">Links for All Races</h1>
+                    <ul>
                     {% for race in races_list %}
-                        <h2 class="title is-size-3">Race: {{ race.name }}</h2>
                         {% set race_url = request.url_root.rstrip('/') + url_for('index', race=race.id) %}
-                        <p class="is-size-4"><a href="{{ race_url }}"><strong>{{ race_url }}</strong></a></p>
+                        <li><p class="is-size-4"><strong>{{ race.name }} - </strong><a href="{{ race_url }}">{{ race_url }}</a></p></li>
                     {% endfor %}
+                    </ul>
                 </section>
             {% endif %}
             <a href="{{ url_for('index') }}" class="button">Back to Participant List</a>

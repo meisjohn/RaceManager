@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+
 {% block content %}
     <section class="section">
         <div class="container">
@@ -6,6 +7,12 @@
 
             {% if error_message %}
                 <p class="notification is-danger">{{ error_message }}</p>
+            {% endif %}
+
+            {% if archived: %}
+                {% set disabled='disabled' %}
+            {% else %}
+                {% set disabled='' %}
             {% endif %}
 
             {% if not judging_active %}
@@ -31,18 +38,19 @@
                     </table>
                  </div>
                 <br>
-                {% if session['role'] == "OWNER" %}
-                    <a href="/open_judging" class="button is-primary">Open Judging Period</a>
+                {% if session['role'] == "OWNER" or session['role'] == "ADMIN" %}
+                    <a href="/open_judging" class="button is-primary {{disabled}}">Open Judging Period</a>
                 {% endif %}
             {% else %}
                 <div class="has-text-centered">
                     <h2 class="subtitle">Scores will be available at the end of judging</h2>
                 </div>
                 <br>
-                {% if session['role'] == "OWNER" %}
-                    <a href="/close_judging" class="button is-primary">Close Judging Period</a>
+                <button class="button {{voting_modifier}}">Voting {{ voting_status }}</button>
+                {% if session['role'] == "OWNER" or session['role'] == "ADMIN" %}
+                    <a href="/close_judging" class="button is-primary {{disabled}}">Close Judging Period</a>
                 {% elif session['role'] == "JUDGE" %}
-                    <a href="/judge_design" class="button is-primary">Go to Judging Forms</a>
+                    <a href="/judge_design" class="button is-primary {{disabled}}">Go to Judging Forms</a>
                     <a href="/logout" class="button is-warning">Logout</a>
     
                 {% endif %}

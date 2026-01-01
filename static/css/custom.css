@@ -37,6 +37,13 @@ button {
   --bulma-box-shadow: 0 0.5em 1em -0.125em hsla(221deg, 25%,4%,0.1),0 0px 0 1px hsla(221deg,14%,4%,0.02);
 }
 
+a.disabled,
+.disbled,
+a.button.disabled{
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
 /* .container {
   margin: 20px auto;
   padding: 20px;

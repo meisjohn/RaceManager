@@ -9,15 +9,18 @@
                     <table class="table is-bordered is-striped is-fullwidth">
                         <thead>
                             <tr>
-                                <th>Race</th>
-                                <th>Time</th>
+                                {% for h in header %}
+                                <th>{{-h-}}</th>
+                                {% endfor %}
                             </tr>
                         </thead>
                         <tbody>
-                            {% for time in participant.times %}
+                            {% for row in race_data %}
                                  <tr>
-                                    <td>{{ loop.index }}</td>
-                                    <td>{{ "{:.3f}".format(time|round(3,'ceil')) }}</td>
+                                    {% for d in row[:-1] %}
+                                    <td>{{ d }}</td>
+                                    {% endfor %}
+                                    <td>{{ "{:.3f}".format(row[-1]|round(3,'ceil')) }}</td> <!-- assumes last field is time-->
                                 </tr>
                             {% endfor %}
                         </tbody>

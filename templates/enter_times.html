@@ -8,7 +8,15 @@
                 <p class="notification is-danger">{{ error_message }}</p>
             {% endif %}
 
-            {% if session['role'] == "OWNER" %}
+            {% if session['role'] == "OWNER"  or session['role'] == "ADMIN" %}
+
+            {% set focus = 'autofocus' %}
+
+            {% if archived: %}
+                {% set disabled='disabled' %}
+            {% else %}
+                {% set disabled='' %}
+            {% endif %}
 
             <form method="POST">
                 <div class="table-container">
@@ -35,7 +43,8 @@
                                 {% for lane in range(1, NUM_LANES + 1) %}
                                     <td>
                                         {% if heat.lanes.get(lane) %}
-                                            <input class="input" type="number" step="0.001" name="time_race_{{ race.race_number }}_heat_{{ heat.heat_number }}_lane_{{ lane }}" value="{% if heat.times.get(lane) %}{{ heat.times[lane] }}{% endif %}" {% if lane == 1 %} autofocus {% endif %}>
+                                            <input class="input" type="number" step="0.001" name="time_race_{{ race.race_number }}_heat_{{ heat.heat_number }}_lane_{{ lane }}" value="{% if heat.times.get(lane) %}{{ heat.times[lane] }}{% endif %}" {{-focus-}} {{disabled}}>
+                                            {% set focus = '' %}:
                                         {% endif %}
                                     </td>
                                 {% endfor %}
@@ -45,8 +54,8 @@
                 </div>
                 <div class="field">
                     <div class="control">
-                        <input class="button is-primary" name="submit" type="submit" value="Submit & Go to List">
-                        <input class="button is-info" name="submit" type="submit" value="Submit & Go to Next Race">
+                        <input class="button is-primary" name="submit" type="submit" value="Submit & Go to List" {{disabled}}>
+                        <input class="button is-info" name="submit" type="submit" value="Submit & Go to Next Race" {{disabled}}>
                     </div>
                 </div>
             </form>

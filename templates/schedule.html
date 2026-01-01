@@ -4,6 +4,12 @@
         <div class="container">
             <h1 class="title">Race Schedule - Round {{ selected_round_name }}</h1>
 
+            {% if archived: %}
+                {% set disabled='disabled' %}
+            {% else %}
+                {% set disabled='' %}
+            {% endif %}
+
             <form id="filterForm" method="GET" class="mb-4">
                 <div class="field is-horizontal">
                     <div class="field-label is-normal">
@@ -79,8 +85,8 @@
                                                 </td>
                                             {% endfor %}
                                             <td>
-                                                {% if session['role'] == "OWNER" %}
-                                                    <a href="/enter_times/{{ race.race_number }}/{{ heat.heat_number }}" class="button is-small is-link">Enter Times</a>
+                                                {% if session['role'] == "OWNER" or session['role'] == "ADMIN" %}
+                                                    <a href="/enter_times/{{ race.race_number }}/{{ heat.heat_number }}" class="button is-small is-link {{disabled}}">Enter Times</a>
                                                 {% endif %}
                                             </td>
                                         </tr>
@@ -92,16 +98,16 @@
                 </div>
                 <br>
                 <div class="has-text-centered">
-                    {% if session['role'] == "OWNER" %}
+                    {% if session['role'] == "OWNER" or session['role'] == "ADMIN" %}
                         {% if selected_round == Rounds.FIRST %}
                             {% for id, name in patrol_names.items() %}
                                 {% if initial_races_completed.get(id, False) and (not semi_final_races_scheduled.get(id, False)) and id != "Exhibition" and (id == selected_patrol or selected_patrol|length == 0) and races|selectattr("patrol", "eq", id)|list|length > 0 %}
-                                    <a href="javascript:confirmAction('Are you sure you want to schedule semi-finals for {{ name }}?', '/schedule_semifinal/{{ id }}')" class="button is-large is-primary mb-2">Schedule Semi-Finals for {{ name }}</a><br>
+                                    <a href="javascript:confirmAction('Are you sure you want to schedule semi-finals for {{ name }}?', '/schedule_semifinal/{{ id }}')" class="button is-large is-primary mb-2 {{disabled}}">Schedule Semi-Finals for {{ name }}</a><br>
                                 {% endif %}
                             {% endfor %}
                         {% elif selected_round == Rounds.SEMI %}
                             {% if all_semi_final_races_completed %}
-                                <a href="javascript:confirmAction('Are you sure you want to schedule the finals?', '/schedule_final')" class="button is-large is-primary mb-2">Schedule Finals</a><br>
+                                <a href="javascript:confirmAction('Are you sure you want to schedule the finals?', '/schedule_final')" class="button is-large is-primary mb-2 {{disabled}}">Schedule Finals</a><br>
                             {% endif %}
                         {% endif %}
                     {% endif %}
