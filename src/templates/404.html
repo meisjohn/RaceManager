@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+    <section class="section">
+    <h1 class="title">404 - Page Not Found</h1>
+    <p class-="subtitle">Oops! The page you're looking for could not be found.</p>
+    <p>Please check the URL or return to the <a href="/" class="has-text-primary">homepage</a>.</p>
+
+    <figure class="image is-4by3">
+        <img src="{{url_for('static', filename='404.png')}}" alt="Crash">
+    </figure>
+    </section>
+{% endblock %}

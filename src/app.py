@@ -110,7 +110,7 @@ except Exception:
 
 DEFAULT_RACE_ID = os.environ.get("DEFAULT_RACE", "demo")
 CURRENT_RACE_ID = DEFAULT_RACE_ID
-CONFIG_DIR = os.environ.get("CONFIG_DIR", ".")
+CONFIG_DIR = os.environ.get("CONFIG_DIR", "config")
 USE_FIRESTORE = os.environ.get("USE_FIRESTORE", "0").lower() in ("1", "true", "yes")
 DEFAULT_API_KEY="DEFAULT_API_KEY"
 DEFAULT_APP_ID="DEFAULT_APP_ID"
