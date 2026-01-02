@@ -1654,7 +1654,17 @@ def login():
 
 @app.route("/race_links")
 def race_links():
-    return render_template("race_links.html", races_list=get_races_list())
+    races = get_races_list()
+    race_id = session.get('current_race_id') or CURRENT_RACE_ID
+    race = next((r for r in races if r['id'] == race_id), None)
+    if race:
+        # Always regenerate, because if redirection is happening for different hosts
+        # then I want the QR to be right. 
+        qr = race.get('race_qr')
+        url = request.url_root.rstrip('/') + url_for('index', race=race_id)
+        generate_qr(url, f'race-{race_id}')
+        
+    return render_template("race_links.html", races_list=races)
 
 
 @app.route("/", methods=["GET", "POST"])
