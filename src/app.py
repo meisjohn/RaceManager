@@ -2145,8 +2145,6 @@ def schedule(race_context: RaceContext):
     check_round_complete(Rounds.SEMI, race_context=race_context)
     save_data(context=race_context)
 
-    top_racers, overall_racer_averages = get_top_racers(selected_round, selected_patrol, NUM_LANES, race_context=race_context)
-
     if race_context.semi_final_races_completed:
         all_semi_final_races_completed = all([v for k,v in race_context.semi_final_races_completed.items() if k != "Exhibition"])
     else:
@@ -2163,8 +2161,6 @@ def schedule(race_context: RaceContext):
                            Rounds=Rounds, 
                            RaceScheduleType=RaceScheduleType,
                            NUM_LANES=NUM_LANES,
-                           top_racers=list(enumerate(top_racers)),
-                           overall_racer_averages=overall_racer_averages,
                            initial_races_completed=race_context.initial_races_completed,
                            semi_final_races_completed=race_context.semi_final_races_completed,
                            all_semi_final_races_completed=all_semi_final_races_completed,

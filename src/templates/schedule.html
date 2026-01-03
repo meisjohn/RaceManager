@@ -128,33 +128,7 @@
                         {% endif %}
                     {% endif %}
                 </div>
-                <br>
-                {% if selected_round == Rounds.FIRST %}
-                    <h2 class="subtitle">Top Racers for Round 1</h2>
-                    <div class="table-container">
-                        <table class="table is-bordered is-striped is-fullwidth">
-                            <thead>
-                                <tr>
-                                    <th class="has-text-centered">Rank</th>
-                                    <th>Name</th>
-                                    <th>Patrol</th>
-                                    <th class="has-text-centered">Average Time</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for i, racer in top_racers %}
-                                    <tr>
-                                        <td class="has-text-centered">{{ i + 1 }}</td>
-                                        <td><strong>{{ racer.car_name }}</strong> {{ racer.first_name }} {{ racer.last_name }}</td>
-                                        <td>{{ patrol_names.get(racer.patrol) }}</td>
-                                        <td class="has-text-centered">{{ "{:.3f}".format(overall_racer_averages.get(racer)|round(3, 'ceil')) }}</td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% endif %}
-            {% else %}
+             {% else %}
                 <div class="has-text-centered">
                     <h2 class="subtitle">No races scheduled
                         {% if selected_patrol in patrol_names %}
