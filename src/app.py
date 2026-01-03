@@ -250,7 +250,7 @@ def write_race_doc(race_id, data, merge=False):
                     db.collection('races').document(str(race_id)).set(data)
                 return True
             except Exception as e:
-                logging.exception("Error writing data to Firebase for race {race_id}: {e}")
+                logger.exception(f"Error writing data to Firebase for race {race_id}: {e}")
                 return False
         else:
             fn = data_filename_for_race(race_id)
@@ -540,8 +540,8 @@ class Heat:
         return {
                 "heat_id": self.heat_id,
                 "heat_number": self.heat_number,
-                "lanes": {lane: p.participant_id if p else None for lane, p in self.lanes.items()},
-                "times": self.times
+                "lanes": {str(lane): p.participant_id if p else None for lane, p in self.lanes.items()},
+                "times": {str(lane): t for lane, t in self.times.items()}
                 }
 
 class Design:
@@ -670,7 +670,7 @@ def load_data(race_id=None, name=None):
         initial_races_completed=data.get('initial_races_completed', {}), 
         semi_final_races_completed=data.get('semi_final_races_completed', {}),
         judging_active=data.get('judging_active', True), 
-        patrol_names=data.get('patrol_names', default_patrol_names),
+        patrol_names=dict(sorted(data.get('patrol_names', default_patrol_names).items())),
         archived=data.get('archived', False))
     
 
@@ -685,12 +685,12 @@ def load_data(race_id=None, name=None):
         context.semi_final_races_completed = \
             {p: False for p in context.patrol_names if p != 'Exhibition'}
 
-    for p_data in data.get('participants', []):
+    for p_data in sorted(data.get('participants', []), key=lambda p: p.get('car_number')):
         p = Participant(p_data.get('first_name'), p_data.get('last_name'), p_data.get('patrol'))
         p.__dict__.update(p_data)
         context.participants.append(p)
 
-    for r_data in data.get('races', []):
+    for r_data in sorted(data.get('races', []), key=lambda r: r.get('race_number')):
         r = Race(r_data.get('patrol'), int(r_data.get('race_number', 0)))
         r.__dict__.update(r_data)
         try:
@@ -1201,7 +1201,7 @@ def admin_race_members(race_id):
     judges_data = context.judges
     for j_name, jinfo in judges_data.items():
         jinfo['voted'] = any([des.scores[jinfo['id']] for des in context.designs.values() if jinfo['id'] in des.scores.keys()])
-    sorted_judges = sorted(judges_data.items())
+    sorted_judges = dict(sorted(judges_data.items()))
     judges_data = dict(sorted_judges)
     owner_token = rd.get('owner_token')
     owner_qr = rd.get('owner_qr')    # filename saved by admin_set_owner_token
@@ -1827,7 +1827,7 @@ def clear_races(race_context: RaceContext):
 def schedule_initial_races(schedule_type: RaceScheduleType, race_context: RaceContext):
 
     race_number = 1
-    for patrol in race_context.patrol_names:
+    for patrol in dict(sorted(race_context.patrol_names.items())):
         patrol_racers = [p for p in race_context.participants if p.patrol == patrol]
 
         if patrol_racers:
@@ -1870,7 +1870,7 @@ def schedule_final_races(schedule_type: RaceScheduleType, race_context: RaceCont
 
     # 1. Get Top Racers from Semi-Finals:
     top_racers = []
-    for patrol in race_context.patrol_names:
+    for patrol in dict(sorted(race_context.patrol_names.items())):
         if patrol != "Exhibition" and race_context.semi_final_races_completed.get(patrol, False):  # Check if semi-finals are complete
             top_racer,_ = get_top_racers(Rounds.SEMI, patrol, 1, race_context=race_context) # Only want to get top 1
             if top_racer:
