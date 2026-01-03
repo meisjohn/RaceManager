@@ -242,12 +242,16 @@ def write_race_doc(race_id, data, merge=False):
     """
     try:
         if USE_FIRESTORE and FIRESTORE_AVAILABLE:
-            db = _gcf.Client()
-            if merge:
-                db.collection('races').document(str(race_id)).set(data, merge=True)
-            else:
-                db.collection('races').document(str(race_id)).set(data)
-            return True
+            try:
+                db = _gcf.Client()
+                if merge:
+                    db.collection('races').document(str(race_id)).set(data, merge=True)
+                else:
+                    db.collection('races').document(str(race_id)).set(data)
+                return True
+            except Exception as e:
+                logging.exception("Error writing data to Firebase for race {race_id}: {e}")
+                return False
         else:
             fn = data_filename_for_race(race_id)
             existing = {}
@@ -255,7 +259,8 @@ def write_race_doc(race_id, data, merge=False):
                 try:
                     with open(fn, 'r') as f:
                         existing = json.load(f)
-                except Exception:
+                except Exception as e:
+                    logger.exception(f"Error loading json file {fn}: {e}")
                     existing = {}
             if merge:
                 for k, v in data.items():
@@ -263,12 +268,16 @@ def write_race_doc(race_id, data, merge=False):
                 to_write = existing
             else:
                 to_write = data
-            with open(fn+".tmp", 'w') as f:
-                json.dump(to_write, f, default=str)
-            os.replace(fn+".tmp", fn) # atomic replace
-            return True
+            try:
+                with open(fn+".tmp", 'w') as f:
+                    json.dump(to_write, f, default=str)
+                os.replace(fn+".tmp", fn) # atomic replace
+                return True
+            except Exception as e:
+                logger.exception(f'Error writing json file {fn}: {e}')
+
     except Exception:
-        logger.exception('Error writing race doc %s', race_id)
+        logger.exception(f'Error writing race doc {race_id}: {e}')
         return False
 
 # Initialize Firebase Admin SDK for auth (used to verify ID tokens and set custom claims).
