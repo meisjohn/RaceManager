@@ -3,35 +3,71 @@
     <section class="section">
         <div class="container">
             <h1 class="title">Race Results</h1>
-            <div class="table-container">
-                <table class="table is-bordered is-striped is-fullwidth is-hoverable">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Patrol</th>
-                            <th class="has-text-centered">Car Name</th>
-                            <th class="has-text-centered">Average Time</th>
-                            <th class="has-text-centered">Best Time</th>
-                            <th class="has-text-centered">Best Time Race #</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for p in participants %}
-                            <tr>
-                                <td>{{ p.first_name }} {{ p.last_name }}</td>
-                                <td>{{ patrol_names.get(p.patrol) }}</td>
-                                <td class="has-text-centered">{{ p.car_name }}</td>
-                                <td class="has-text-centered">{{ "{:.3f}".format(p.average_time|round(3,'ceil')) }}</td>
-                                <td class="has-text-centered">{{ "{:.3f}".format(p.best_time|round(3,'ceil')) }}</td>
-                                <td class="has-text-centered">{{ p.best_time_race_number }}</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            
+            {% for patrol_id, items in participants|groupby('patrol') %}
+                {% set open_details = "open" %}
+                {% if patrol %}
+                    {% if patrol != patrol_id %}
+                        {% set open_details = "" %}
+                    {% endif %}
+                {% endif %}
+                <details class="patrol-section" {{open_details}}>
+                    <summary class="is-size-5">
+                        {{ patrol_names.get(patrol_id, patrol_id) }}
+                        <span class="tag is-rounded">{{ items|length }}</span>
+                    </summary>
+                    <div class="content-wrapper">
+                        <div class="columns is-multiline">
+                            {% for p in items %}
+                                <div class="column is-12-mobile is-5-tablet is-3-desktop">
+                                    <div class="card" style="height: 100%;">
+                                        <div class="card-header has-background-info-light">
+                                            <p class="card-header-title title is-4">{{ p.first_name }} {{ p.last_name }}</p>
+                                        </div>
+                                        <div class="card-content">
+                                            <div class="content">
+                                                <p class="subtitle is-5 mb-2">Car: <strong>{{ p.car_name }}</strong></p>
+                                                <table class="table">
+                                                    <tbody>
+                                                        <tr>
+                                                            <td><p class="is-6">Rank</p></td>
+                                                            <td><p class="is-6"><strong>{{ loop.index }}<strong></p></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td><p class="is-6">Average Time</p></td>
+                                                            <td><p class="is-6"><strong>{{ "{:.3f}".format(p.average_time|round(3,'ceil')) }}</strong></strong></p></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td><p class="is-6">Best Time</p></td>
+                                                            <td><p class="is-6"><strong>{{ "{:.3f}".format(p.best_time|round(3,'ceil')) }}</strong></p></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td><p class="is-6">Best Race/Heat</p></td>
+                                                            <td><p class="is-6"><strong>{{ p.best_time_race_number }}</strong></p></td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </details>
+            {% else %}
+                <div class="notification is-info">No results available yet.</div>
+            {% endfor %}
+
+            {% if patrol %}
+            <a href="{{url_for('schedule', patrol=patrol)}}" class="button is-large is-fullwidth">View Schedule</a>
+            {% else %}
+            <a href="{{url_for('schedule')}}" class="button is-large is-fullwidth">View Schedule</a>
+            {% endif %}
+
             <br>
             <div class="has-text-centered">
-                <a href="/download_results" class="button is-large is-primary">Download Results</a>
+                <a href="/download_results" class="button is-large is-primary is-fullwidth">Download Results</a>
             </div>
         </div>
     </section>

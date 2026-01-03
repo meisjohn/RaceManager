@@ -37,7 +37,7 @@
                         <div class="control">
                             <div class="select">
                                 <select name="patrol" required {{disabled}}>
-                                    {% for id, name in patrol_names.items() %}
+                                    {% for id, name in patrol_names.items()|sort %}
                                         <option value="{{ id }}">{{ name }}</option>
                                     {% endfor %}
                                 </select>
@@ -57,42 +57,56 @@
                 <h2 class="subtitle">Racer List</h2>
             {% endif %}
 
-            <div class="table-container">
-                <table class="table is-bordered is-striped is-fullwidth is-hoverable">
-                    <thead>
-                        <tr>
-                            <th>First Name</th>
-                            <th>Last Name</th>
-                            <th>Patrol</th>
-                            <th>Car Name</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for p in participants %}
-                            <tr>
-                                <td>{{ p.first_name }}</td>
-                                <td>{{ p.last_name }}</td>
-                                <td>{{ patrol_names.get(p.patrol) }}</td>
-                                <td>{{ p.car_name }}</td>
-                                <td>
-                                    {% if session['role'] == 'OWNER' or session['role'] == 'ADMIN' %}
-                                        <a href="/edit_participant/{{ p.participant_id }}" class="button is-small is-link {{disabled}}">Edit</a>
-                                        <form method="POST" action="/delete_participant/{{ p.participant_id }}" style="display: inline;">
-                                            <button class="button is-small is-danger" type="submit" onclick="return confirm('Are you sure you want to delete this participant?')" {{disabled}}>Delete</button>
-                                        </form>
-                                    {% endif %}
-                                    <a href="/participant_times/{{ p.participant_id }}" class="button is-small is-info {{disabled}}">Race Times</a>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            {% for patrol_id, items in participants|groupby('patrol') %}
+                <details class="patrol-section" open>
+                    <summary class="is-size-5">
+                        {{ patrol_names.get(patrol_id, patrol_id) }}
+                        <span class="tag is-rounded">{{ items|length }}</span>
+                    </summary>
+                    <div class="content-wrapper">
+                        <div class="columns is-multiline">
+                            {% for p in items %}
+                                <div class="column is-12-mobile is-6-tablet is-5-desktop">
+                                    <div class="card" style="height: 100%; display: flex; flex-direction: column;">
+                                        <div class="card-header has-background-info-light">
+                                            <p class="card-header-title title is-4">{{ p.first_name }} {{ p.last_name }}</p>
+                                        </div>
+                                        <div class="card-content">
+                                            <div class="media">
+                                                <div class="media-content">
+                                                    <p class="subtitle is-5">Car: <strong>{{ p.car_name }}</strong>
+                                                    {% if p.car_weight_oz %}
+                                                    | Weight: <strong>{{ p.car_weight_oz }} oz</strong>
+                                                    {% endif %}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <footer class="card-footer" style="margin-top: auto;">
+                                            <a href="/participant_times/{{ p.participant_id }}" class="card-footer-item button is-info {{disabled}}">Times</a>
+                                            {% if session['role'] == 'OWNER' or session['role'] == 'ADMIN' %}
+                                                <a href="/edit_participant/{{ p.participant_id }}" class="card-footer-item button is-link {{disabled}}">Edit</a>
+                                                <form method="POST" action="/delete_participant/{{ p.participant_id }}" class="card-footer-item p-0" style="align-items: stretch;">
+                                                    <button class="button is-danger is-inverted is-fullwidth" type="submit" onclick="return confirm('Are you sure you want to delete this participant?')" {{disabled}}>Delete</button>
+                                                </form>
+                                            {% endif %}
+                                        </footer>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </details>
+            {% else %}
+                <div class="notification is-info">No participants found.</div>
+            {% endfor %}
+
             <br>
             {% if session['role'] == 'OWNER' or session['role'] == 'ADMIN' %}
                 <div class="has-text-centered">
-                    <a href="javascript:confirmAction('Are you sure you want to clear existing race data and schedule new races?', '/schedule_initial')" class="button is-large is-warning {{disabled}}">Clear Race Data and Schedule First Round</a>
+                    <a href="javascript:confirmAction('Are you sure you want to clear existing race data and schedule new races?', '{{url_for('schedule_initial', schedule_type=RaceScheduleType.PAIRED.value)}}')" class="button is-large is-warning {{disabled}}">Clear Race Data and Schedule Paired Lanes for First Round</a>
+                    <a href="javascript:confirmAction('Are you sure you want to clear existing race data and schedule new races?', '{{url_for('schedule_initial', schedule_type=RaceScheduleType.ALL_LANES.value)}}')" class="button is-large is-warning {{disabled}}">Clear Race Data and Schedule All Lanes First Round</a>
+
                 </div>
             {% endif %}
         </div>

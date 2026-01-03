@@ -478,6 +478,10 @@ class Rounds(Enum):
     SEMI = 2
     FINAL = 3
 
+class RaceScheduleType(Enum):
+    PAIRED=1
+    ALL_LANES=2
+
 class Participant:
     def __init__(self, first_name, last_name, patrol):
         self.first_name = first_name
@@ -1675,7 +1679,8 @@ def index(race_context: RaceContext):
 
     return render_template("index.html", 
                            participants=sorted_participants,
-                           archived=race_context.archived, 
+                           archived=race_context.archived,
+                           RaceScheduleType=RaceScheduleType, 
                            patrol_names=race_context.patrol_names)
 
 
@@ -1810,7 +1815,7 @@ def clear_races(race_context: RaceContext):
         p.best_time_race_number = None
 
 @require_race_context
-def schedule_initial_races(race_context: RaceContext):
+def schedule_initial_races(schedule_type: RaceScheduleType, race_context: RaceContext):
 
     race_number = 1
     for patrol in race_context.patrol_names:
@@ -1818,7 +1823,10 @@ def schedule_initial_races(race_context: RaceContext):
 
         if patrol_racers:
             race_groups = group_racers(patrol_racers)
-            assign_paired_lanes(race_groups, Rounds.FIRST, race_number, race_context=race_context)
+            if schedule_type == RaceScheduleType.PAIRED:
+                assign_paired_lanes(race_groups, Rounds.FIRST, race_number, race_context=race_context)
+            else:
+                assign_all_lanes(race_groups, Rounds.FIRST, race_number, race_context=race_context)
             race_number += len(race_groups)
 
             race_context.initial_races_completed[patrol] = False # Initialize to False at the start
@@ -1829,7 +1837,7 @@ def schedule_initial_races(race_context: RaceContext):
 
 
 @require_race_context
-def schedule_semi_final_races(patrol, race_context: RaceContext):
+def schedule_semi_final_races(patrol, schedule_type: RaceScheduleType,race_context: RaceContext):
 
     if patrol == "Exhibition":
         return  # Don't schedule semi-finals for the exhibition patrol
@@ -1841,10 +1849,13 @@ def schedule_semi_final_races(patrol, race_context: RaceContext):
 
     if top_racers:
         race_groups = [name_sorted_top_racers]  # Create a single group of top racers
-        assign_paired_lanes(race_groups, Rounds.SEMI, len(race_context.races) + 1, race_context=race_context) 
+        if schedule_type == RaceScheduleType.PAIRED:
+            assign_paired_lanes(race_groups, Rounds.SEMI, len(race_context.races) + 1, race_context=race_context)
+        else:
+            assign_all_lanes(race_groups, Rounds.SEMI, len(race_context.races) + 1, race_context=race_context)
 
 @require_race_context
-def schedule_final_races(race_context: RaceContext):
+def schedule_final_races(schedule_type: RaceScheduleType, race_context: RaceContext):
     if not all(race_context.semi_final_races_completed.values()):
         return
 
@@ -1859,7 +1870,10 @@ def schedule_final_races(race_context: RaceContext):
     # 2. Create Final Race (using all lanes assignment):
     if top_racers: # Only if there are top racers
         race_groups = [top_racers]
-        assign_all_lanes(race_groups, Rounds.FINAL, len(race_context.races) + 1, race_context=race_context)  # Use assign_all_lanes
+        if schedule_type == RaceScheduleType.PAIRED:
+            assign_paired_lanes(race_groups, Rounds.FINAL, len(race_context.races) + 1, race_context=race_context)
+        else:
+            assign_all_lanes(race_groups, Rounds.FINAL, len(race_context.races) + 1, race_context=race_context)
 
 @require_race_context
 def get_top_racers(round: Rounds, patrol = None, racer_count=NUM_LANES, race_context: RaceContext = None):
@@ -2025,7 +2039,10 @@ def enter_times(race_number, heat_number, race_context:  RaceContext):
             return redirect(url_for("enter_times", race_number=next_race_number, heat_number=next_heat_number)) # Add round parameter
         else:
             # Go to the list
-            return redirect(url_for("schedule", patrol=race.patrol, round=race.round.value)) # Add round parameter
+            if race.round == Rounds.SEMI:
+                return redirect(url_for("display_results", patrol=race.patrol)) # Go back unfiltered
+            else:
+                return redirect(url_for("schedule", patrol=race.patrol, round=race.round.value)) # Add round parameter
 
     return render_template("enter_times.html", race=race, heat=heat, NUM_LANES=NUM_LANES, archived=race_context.archived)
 
@@ -2063,31 +2080,34 @@ def check_round_complete(round, race_context: RaceContext):
 @require_role('OWNER')
 @require_race_context
 def schedule_initial(race_context: RaceContext):
+    schedule_type = RaceScheduleType(int(request.args.get("schedule_type", RaceScheduleType.PAIRED.value)))
     logger.info('schedule_initial requested by uid=%s', session.get('fb_uid') or session.get('role'))
     clear_races(race_context=race_context)
-    schedule_initial_races(race_context=race_context)
+    schedule_initial_races(schedule_type, race_context=race_context)
     save_data(context=race_context) # Saving data after scheduling initial round
-    logger.info('schedule_initial completed; total races=%s', len(race_context.races))
+    logger.info('schedule_initial completed; schedule_type=%s, total races=%s', schedule_type.name, len(race_context.races))
     return redirect(url_for("schedule", round=Rounds.FIRST.value)) # Redirect to the main schedule page
 
 @app.route("/schedule_semifinal/<patrol>")
 @require_role('OWNER')
 @require_race_context
 def schedule_semifinal(patrol, race_context: RaceContext):
+    schedule_type = RaceScheduleType(int(request.args.get("schedule_type", RaceScheduleType.PAIRED.value)))
     logger.info('schedule_semifinal requested for patrol=%s by uid=%s', patrol, session.get('fb_uid') or session.get('role'))
-    schedule_semi_final_races(patrol, race_context=race_context)
+    schedule_semi_final_races(patrol, schedule_type, race_context=race_context)
     save_data(context=race_context) # Saving data after scheduling semi-final round
-    logger.info('schedule_semifinal completed for patrol=%s; total races=%s', patrol, len(race_context.races))
-    return redirect(url_for("schedule", round=Rounds.SEMI.value)) # Add round parameter
+    logger.info('schedule_semifinal completed for patrol=%s, schedule_type=%s, total races=%s', patrol, schedule_type.name, len(race_context.races))
+    return redirect(url_for("schedule", patrol=patrol, round=Rounds.SEMI.value)) # Add round parameter
 
 @app.route("/schedule_final")
 @require_role('OWNER')
 @require_race_context
 def schedule_final(race_context: RaceContext):
+    schedule_type = RaceScheduleType(int(request.args.get("schedule_type", RaceScheduleType.ALL_LANES.value)))
     logger.info('schedule_final requested by uid=%s', session.get('fb_uid') or session.get('role'))
-    schedule_final_races(race_context=race_context)
+    schedule_final_races(schedule_type,race_context=race_context)
     save_data(context=race_context) # Saving data after scheduling final round
-    logger.info('schedule_final completed; total races=%s', len(race_context.races))
+    logger.info('schedule_final completed; schedule_type=%s, total races=%s', schedule_type.name, len(race_context.races))
     return redirect(url_for("schedule", round=Rounds.FINAL.value)) # Add round parameter
 
 @app.route("/schedule", methods=["GET"])
@@ -2109,6 +2129,8 @@ def schedule(race_context: RaceContext):
         selected_round_name = "Semi-Finals"
     elif selected_round == Rounds.FINAL:
         selected_round_name = "Finals"
+    elif selected_round == Rounds.NONE:
+        selected_round_name = "All Rounds"
 
     check_round_complete(Rounds.FIRST, race_context=race_context)
     check_round_complete(Rounds.SEMI, race_context=race_context)
@@ -2130,6 +2152,7 @@ def schedule(race_context: RaceContext):
                            selected_round_value=selected_round.value,
                            selected_round_name = selected_round_name, 
                            Rounds=Rounds, 
+                           RaceScheduleType=RaceScheduleType,
                            NUM_LANES=NUM_LANES,
                            top_racers=list(enumerate(top_racers)),
                            overall_racer_averages=overall_racer_averages,
@@ -2139,7 +2162,7 @@ def schedule(race_context: RaceContext):
                            semi_final_races_scheduled=semi_final_races_scheduled,
                            archived=race_context.archived)
 
-def calculate_race_averages(race):
+def calculate_race_averages(race: Race):
     racer_race_times = {}  # Store total times for racers in the race
     racer_heat_counts = {} # Store number of heats a racer participated in
 
@@ -2158,7 +2181,7 @@ def calculate_race_averages(race):
 
     return racer_averages
 
-def calculate_race_statistics(participant, race_context: RaceContext):
+def calculate_race_statistics(participant: Participant, race_context: RaceContext):
     p = participant
     if p.times:
         p.best_time = min(p.times)
@@ -2169,8 +2192,7 @@ def calculate_race_statistics(participant, race_context: RaceContext):
         p.average_time = 0
         p.best_time_race_number = None
 
-def get_best_time_race_number(participant, race_context: RaceContext):
-    best_time_race_number = None
+def get_best_time_race_number(participant: Participant, race_context: RaceContext):
     if participant.times:
         if participant.best_time > 0:
             for race in race_context.races:
@@ -2178,7 +2200,7 @@ def get_best_time_race_number(participant, race_context: RaceContext):
                     for lane,p in heat.lanes.items():
                         if p == participant and lane in heat.times and \
                            heat.times[lane] == participant.best_time:
-                               return race.race_number
+                               return f"{race.race_number}-{heat.heat_number}" 
     return None
 
 @app.route("/judge_design", methods=["GET", "POST"])
@@ -2243,7 +2265,7 @@ def open_judging(race_context: RaceContext):
     return redirect(url_for("design_results"))
 
 
-def score_design(design):
+def score_design(design: Design):
     total_score = 0
     first = 0
     second = 0
@@ -2308,13 +2330,15 @@ def design_results(race_context: RaceContext):
 @app.route("/display_results")
 @require_race_context
 def display_results(race_context: RaceContext):
+    patrol = request.args.get("patrol", None)
     valid_participants = [p for p in race_context.participants if p.times]
     sorted_participants = sorted(valid_participants, key=lambda x: (x.average_time, x.best_time))
     for p in sorted_participants:
         calculate_race_statistics(p, race_context=race_context)
     return render_template("results.html", 
                            participants=sorted_participants, 
-                           patrol_names=race_context.patrol_names)
+                           patrol_names=race_context.patrol_names,
+                           patrol=patrol)
 
 @app.route("/download_results")
 @require_race_context

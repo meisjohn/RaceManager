@@ -19,48 +19,48 @@
             {% endif %}
 
             <form method="POST">
-                <div class="table-container">
-                    <table class="table is-bordered is-striped is-fullwidth">
-                        <thead>
-                            <tr>
-                                {% for lane in range(1, NUM_LANES + 1) %}
-                                    <th>Lane {{ lane }}</th>
-                                {% endfor %}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                {% for lane in range(1, NUM_LANES + 1) %}
-                                    <td>
-                                        {% if heat.lanes.get(lane) %}
-                                            <strong>{{ heat.lanes.get(lane).car_name }}</strong><br>
-                                            {{ heat.lanes.get(lane).first_name }} {{ heat.lanes.get(lane).last_name }}<br>
-                                        {% endif %}
-                                    </td>
-                                {% endfor %}
-                            </tr>
-                            <tr>
-                                {% for lane in range(1, NUM_LANES + 1) %}
-                                    <td>
-                                        {% if heat.lanes.get(lane) %}
-                                            <input class="input" type="number" step="0.001" name="time_race_{{ race.race_number }}_heat_{{ heat.heat_number }}_lane_{{ lane }}" value="{% if heat.times.get(lane) %}{{ heat.times[lane] }}{% endif %}" {{-focus-}} {{disabled}}>
-                                            {% set focus = '' %}:
-                                        {% endif %}
-                                    </td>
-                                {% endfor %}
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="field">
-                    <div class="control">
-                        <input class="button is-primary" name="submit" type="submit" value="Submit & Go to List" {{disabled}}>
-                        <input class="button is-info" name="submit" type="submit" value="Submit & Go to Next Race" {{disabled}}>
+                <div class="card mb-4">
+                    <header class="card-header has-background-light">
+                        <p class="card-header-title">
+                            Race {{ race.race_number }} - Heat {{ heat.heat_number }}
+                        </p>
+                    </header>
+                    <div class="card-content">
+                        <div class="columns is-mobile is-multiline">
+                            {% for lane in range(1, NUM_LANES + 1) %}
+                                <div class="column is-6-mobile is-3-tablet">
+                                    <div class="lane-tile has-text-centered">
+                                        <div class="has-background-info-light p-1 has-text-weight-bold">Lane {{ lane }}</div>
+                                        <div class="p-3">
+                                            {% if heat.lanes.get(lane) %}
+                                                <div class="is-size-4 has-text-weight-bold">{{ heat.lanes.get(lane).car_name }}</div>
+                                                <div class="is-size-5 mb-2">{{ heat.lanes.get(lane).first_name }} {{ heat.lanes.get(lane).last_name }}</div>
+                                                <div class="field">
+                                                    <div class="control">
+                                                        <input class="input has-text-centered" type="number" step="0.001" name="time_race_{{ race.race_number }}_heat_{{ heat.heat_number }}_lane_{{ lane }}" value="{% if heat.times.get(lane) %}{{ heat.times[lane] }}{% endif %}" {{-focus-}} {{disabled}}>
+                                                    </div>
+                                                </div>
+                                                {% set focus = '' %}
+                                            {% else %}
+                                                <div class="has-text-grey-light is-italic py-4">Lane Empty</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="field">
+                        <div class="control">
+                        <footer class="card-footer">
+                            <input class="button card-footer-item is-primary" name="submit" type="submit" value="Submit & Go to List" {{disabled}}>
+                            <input class="button card-footer-item is-info" name="submit" type="submit" value="Submit & Go to Next Race" {{disabled}}>
+                        </footer></div>
                     </div>
                 </div>
             </form>
             {% endif %}
-            <a href="{{ url_for('schedule') }}" class="button">Back to Schedule</a>
+            <a href="{{ url_for('schedule') }}" class="button is-fullwidth">Back to Schedule</a>
         </div>
     </section>
 {% endblock %}

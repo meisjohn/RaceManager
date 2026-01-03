@@ -50,3 +50,149 @@ a.button.disabled{
   background-color: #fff;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   border-radius: 5px; } */
+
+/* Collapsible Patrol Sections (Accordion) */
+details.patrol-section {
+    margin-bottom: 1.5rem;
+    background-color: #fff;
+    border-radius: 6px;
+    box-shadow: 0 0.5em 1em -0.125em rgba(10, 10, 10, 0.1), 0 0px 0 1px rgba(10, 10, 10, 0.02);
+}
+details.patrol-section summary {
+    padding: 1rem;
+    cursor: pointer;
+    font-weight: 600;
+    background-color: #f5f5f5;
+    border-radius: 6px;
+    list-style: none;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+details.patrol-section[open] summary {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: 1px solid #dbdbdb;
+}
+details.patrol-section summary:hover {
+    background-color: #eeeeee;
+}
+details.patrol-section summary::-webkit-details-marker {
+    display: none;
+}
+details.patrol-section summary::after {
+    content: '+';
+    font-weight: bold;
+    margin-left: 10px;
+}
+details.patrol-section summary .tag {
+    margin-left: auto;
+    margin-right: 10px;
+}
+details.patrol-section[open] summary::after {
+    content: '-';
+}
+details.patrol-section .content-wrapper {
+    padding: 1.25rem;
+}
+
+/* Responsive Table (Data Stacking) */
+@media screen and (max-width: 768px) {
+    .table.is-responsive thead { display: none; }
+    .table.is-responsive tr {
+        display: block;
+        margin-bottom: 1rem;
+        border: 1px solid #dbdbdb;
+        border-radius: 4px;
+        box-shadow: 0 2px 3px rgba(10, 10, 10, 0.1);
+        background-color: white;
+    }
+    .table.is-responsive td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: none;
+        border-bottom: 1px solid #f5f5f5;
+        text-align: right;
+    }
+    .table.is-responsive td:last-child { border-bottom: none; }
+    .table.is-responsive td::before {
+        content: attr(data-label);
+        font-weight: bold;
+        text-align: left;
+        margin-right: 1rem;
+    }
+    .table.is-responsive td .button { width: 100%; }
+}
+
+.lane-tile {
+    border: 1px solid #dbdbdb;
+    border-radius: 4px;
+    height: 100%;
+    overflow: hidden;
+    background-color: white;
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #121212;
+        color: #b5b5b5;
+    }
+    .title { color: #fff; }
+    .subtitle, .label, .checkbox, .radio { color: #b5b5b5; }
+    
+    .box, .card, details.patrol-section {
+        background-color: #1e1e1e;
+        color: #b5b5b5;
+        box-shadow: 0 0.5em 1em -0.125em rgba(0,0,0,0.5), 0 0px 0 1px rgba(255,255,255,0.05);
+    }
+    
+    details.patrol-section summary {
+        background-color: #2c2c2c;
+        color: #fff;
+    }
+    details.patrol-section summary:hover {
+        background-color: #383838;
+    }
+    details.patrol-section[open] summary {
+        border-bottom: 1px solid #444;
+    }
+    
+    .input, .select select, .textarea {
+        background-color: #2c2c2c;
+        border-color: #444;
+        color: #fff;
+    }
+    
+    .table {
+        background-color: #1e1e1e;
+        color: #b5b5b5;
+    }
+    .table td, .table th {
+        border-color: #444;
+        color: #b5b5b5;
+    }
+    .table thead th {
+        color: #fff;
+    }
+    .table.is-striped tbody tr:not(.is-selected):nth-child(even) {
+        background-color: #252525;
+    }
+    
+    .lane-tile {
+        background-color: #2c2c2c;
+        border-color: #444;
+    }
+    .has-background-light {
+        background-color: #333 !important;
+    }
+    .has-background-info-light {
+        background-color: #20486a !important;
+        color: #fff !important;
+    }
+    .card-header-title {
+        color: #fff;
+    }
+}

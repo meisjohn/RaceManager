@@ -16,27 +16,59 @@
             {% endif %}
 
             {% if not judging_active %}
-                <div class="table-container">
-                    <table class="table is-bordered is-striped">
-                        <thead>
-                            <tr>
-                                <th >Car</th>
-                                <th class=" has-text-centered">Score</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for patrol_id, patrol_name in patrol_names.items() %}
-                                <tr><th class="has-text-weight-bold has-text-centered is-inverted" colspan="2">{{patrol_name}}</th></tr>
-                                {% for s in sorted_scores_by_patrol[patrol_id] %}
-                                    <tr>
-                                        <td><strong>{{ s[0].car_name }}</strong> {{ s[0].first_name }} {{ s[0].last_name }}</td>
-                                        <td class="has-text-centered">{{ s[1] }}</td>
-                                    </tr>
-                                {% endfor %}
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                 </div>
+                {% for patrol_id, patrol_name in patrol_names.items() %}
+                    {% set items = sorted_scores_by_patrol[patrol_id] %}
+                    {% if items %}
+                        <details class="patrol-section" open>
+                            <summary class="is-size-5">
+                                {{ patrol_name }}
+                                <span class="tag is-rounded">{{ items|length }}</span>
+                            </summary>
+                            <div class="content-wrapper">
+                                <div class="columns is-multiline">
+                                    {% for s in items %}
+                                        <div class="column is-12-mobile is-5-tablet is-3-desktop">
+                                            <div class="card" style="height: 100%;">
+                                                <div class="card-header has-background-info-light">
+                                                    <p class="card-header-title title is-4">{{ s[0].first_name }} {{ s[0].last_name }}</p>
+                                                </div>
+                                                <div class="card-content">
+                                                    <div class="content">
+                                                        <p class="subtitle is-5 mb-2">Car: <strong>{{ s[0].car_name }}</strong></p>
+                                                        <table class="table is-fullwidth">
+                                                            <tbody>
+                                                                <tr class="has-background-success-soft">
+                                                                    <td><p class="has-text-success-bold is-6">Rank</p></td>
+                                                                    <td><p class="is-6"><strong class="has-text-success-bold">{{ loop.index }}</strong></p></td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td><p class="is-6">Total Score</p></td>
+                                                                    <td><p class="is-6"><strong>{{ s[1] }}</strong></p></td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td><p class="is-6"># of 1st Place Votes</p></td>
+                                                                    <td><p class="is-6"><strong>{{ s[2] }}</strong></p></td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td><p class="is-6"># of 2nd Place Votes</p></td>
+                                                                    <td><p class="is-6"><strong>{{ s[3] }}</strong></p></td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td><p class="is-6"># of 3rd Place Votes</p></td>
+                                                                    <td><p class="is-6"><strong>{{ s[4] }}</strong></p></td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </details>
+                    {% endif %}
+                {% endfor %}
                 <br>
                 {% if session['role'] == "OWNER" or session['role'] == "ADMIN" %}
                     <a href="/open_judging" class="button is-primary {{disabled}}">Open Judging Period</a>
