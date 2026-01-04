@@ -2,7 +2,7 @@ from glob import glob
 import logging
 import sys
 from typing import Dict, List, Any
-from flask import Flask, render_template, request, redirect, url_for, \
+from flask import Flask, render_template, request, redirect, send_from_directory, url_for, \
     jsonify, Response, flash, session, g
 import itertools
 import json
@@ -86,18 +86,11 @@ logger.addHandler(handler)
 logging.getLogger('werkzeug').handlers = [handler]
 logging.getLogger('werkzeug').setLevel(logging.INFO)
 
+logging.getLogger('urllib3.connectionpool').handlers = [handler]
+logging.getLogger('urllib3.connectionpool').setLevel(logging.INFO)
+
 # Basic startup log (CURRENT_RACE_ID is set later)
 logger.info("Starting RaceManager app; DEFAULT_RACE not yet resolved; LOG_LEVEL=%s", LOG_LEVEL)
-
-
-@app.before_request
-def ensure_request_id():
-    # propagate incoming request id or generate one
-    rid = request.headers.get('X-Request-ID') or uuid.uuid4().hex
-    try:
-        g.request_id = rid
-    except Exception:
-        pass
 
 # Optional Firestore support. Enable by setting USE_FIRESTORE=1 and
 # providing Cloud Run service account or GOOGLE_APPLICATION_CREDENTIALS.
@@ -115,9 +108,6 @@ USE_FIRESTORE = os.environ.get("USE_FIRESTORE", "0").lower() in ("1", "true", "y
 DEFAULT_API_KEY="DEFAULT_API_KEY"
 DEFAULT_APP_ID="DEFAULT_APP_ID"
 
-
-
-
 # Config File templates and constants
 DATA_FILE_TEMPLATE = "race_data_{race_id}.json"
 ARCHIVE_FILE_TEMPLATE = "race_archive_{race_id}.json"
@@ -125,14 +115,67 @@ RACE_MEMBERS_FILE_TEMPLATE = "race_members_{race_id}.json"
 PATROL_CONFIG_FILE = "patrol_config.json"
 AUTH_CONFIG_FILE = "auth_config.json"
 
+def data_filename_for_race(race_id):
+    return os.path.join(CONFIG_DIR, DATA_FILE_TEMPLATE.format(race_id=str(race_id)))
+
+def archive_filename_for_race(race_id):
+    return os.path.join(CONFIG_DIR, ARCHIVE_FILE_TEMPLATE.format(race_id=str(race_id)))
+
+def members_filename_for_race(race_id):
+    return os.path.join(CONFIG_DIR, RACE_MEMBERS_FILE_TEMPLATE.format(race_id=str(race_id)))
+
+def patrol_config_filename():
+    return os.path.join(CONFIG_DIR, PATROL_CONFIG_FILE)
+
+def auth_config_filename():
+    return os.path.join(CONFIG_DIR, AUTH_CONFIG_FILE)
+
 NUM_LANES = os.environ.get("NUM_LANES", 4)
 
+# Initialize Firebase Admin SDK for auth (used to verify ID tokens and set custom claims).
+FIREBASE_ADMIN_AVAILABLE = False
+try:
+    if os.environ.get('FIREBASE_CREDENTIALS'):
+        # Local Dev path
+        cred = fb_credentials.Certificate(os.environ.get('FIREBASE_CREDENTIALS'))
+        firebase_admin.initialize_app(cred)
+    else:
+        # Cloud Run (ADC) path
+        firebase_admin.initialize_app()
+    FIREBASE_ADMIN_AVAILABLE = True
+except Exception as e:
+    logger.warning("Firebase Admin init failed or not configured: %s", e, exc_info=True)
+    FIREBASE_ADMIN_AVAILABLE = False
 
 # In-memory per-race cache (default TTL seconds). Use Redis later for cross-instance caching.
 CACHE_TTL = int(os.environ.get('CACHE_TTL', '30'))
 _race_cache = {}  # race_id -> {'data': ..., 'ts': float}
 _race_cache_locks = {}
 _race_cache_master_lock = threading.Lock()
+
+default_patrol_names = {
+    "1": "Foxes", 
+    "2": "Hawks", 
+    "3": "Mountain Lions", 
+    "4": "Navgators", 
+    "5": "Adventurers", 
+    "Exhibition": "Exhibition"
+}
+fn = patrol_config_filename()
+if fn and os.path.exists(fn):
+    with open(fn, 'r') as f:
+        default_patrol_names = json.load(f)
+else:
+    logger.warning("No patrol_config.json file found; using default patrol names.")
+
+auth_config = {}
+fn = auth_config_filename()
+if fn and os.path.exists(fn):
+    with open(fn, 'r') as f:
+        auth_config = json.load(f)
+else:
+    logger.warning("No auth_config.json file found; using empty config.")
+
 
 def _get_race_lock(rid):
     with _race_cache_master_lock:
@@ -163,6 +206,7 @@ def get_race_cached(race_id, ttl=None):
                 logger.debug('Cache hit for race %s after lock (age=%.1fs)', race_id, age)
                 return entry2.get('data')
         except Exception:
+            logger.exception(f"Exception caught while reading cache, race_id={race_id}")
             return None
     age = time.time() - entry.get('ts', 0)
     #logger.debug(f"Loaded data: {entry.get('data')}")
@@ -185,12 +229,6 @@ def invalidate_race_cache(race_id):
             logger.info('Invalidated in-memory cache for race %s', race_id)
     except Exception:
         logger.exception('Failed to invalidate cache for race %s', race_id)
-
-def data_filename_for_race(race_id):
-    return os.path.join(CONFIG_DIR, DATA_FILE_TEMPLATE.format(race_id=str(race_id)))
-
-def archive_filename_for_race(race_id):
-    return os.path.join(CONFIG_DIR, ARCHIVE_FILE_TEMPLATE.format(race_id=str(race_id)))
 
 def read_race_doc(race_id, include_archive=False):
     """Return the race-level document/data dict from Firestore or local file."""
@@ -232,7 +270,6 @@ def read_race_doc(race_id, include_archive=False):
     except Exception as e:
         logger.exception('Error reading race doc %s, exception: %s', race_id, str(e))
         return {}
-
 
 def write_race_doc(race_id, data, merge=False):
     """Write race-level data to Firestore or local file.
@@ -280,20 +317,67 @@ def write_race_doc(race_id, data, merge=False):
         logger.exception(f'Error writing race doc {race_id}: {e}')
         return False
 
-# Initialize Firebase Admin SDK for auth (used to verify ID tokens and set custom claims).
-FIREBASE_ADMIN_AVAILABLE = False
-try:
-    if os.environ.get('FIREBASE_CREDENTIALS'):
-        # Local Dev path
-        cred = fb_credentials.Certificate(os.environ.get('FIREBASE_CREDENTIALS'))
-        firebase_admin.initialize_app(cred)
+def read_members_local(race_id):
+    fname = members_filename_for_race(race_id)
+    try:
+        with open(fname, 'r') as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def write_members_local(race_id, members):
+    fname = members_filename_for_race(race_id)
+    with open(fname, 'w') as f:
+        json.dump(members, f)
+
+@app.before_request
+def ensure_request_id():
+    # propagate incoming request id or generate one
+    rid = request.headers.get('X-Request-ID') or uuid.uuid4().hex
+    try:
+        g.request_id = rid
+    except Exception:
+        pass
+
+@app.before_request
+def log_request_info():
+    if '/static/' in request.url:
+        # Don't log static artifact queries
+        return
+    if request.is_json:
+        logger.info(f'Request received for url: {request.url}, method: {request.method}', extra={
+            'url': request.url,
+            'path': request.path,
+            'request_args': dict(request.args),
+            'method': request.method,
+            'headers': dict(request.headers),
+            'uid_or_role': session.get('fb_uid') or session.get('role') or None,
+            'form_data': request.form.to_dict() if request.form else None,
+            'json_body': request.get_json(silent=True) # Use silent=True to avoid errors if not a valid JSON
+        })
     else:
-        # Cloud Run (ADC) path
-        firebase_admin.initialize_app()
-    FIREBASE_ADMIN_AVAILABLE = True
-except Exception as e:
-    logger.warning("Firebase Admin init failed or not configured: %s", e, exc_info=True)
-    FIREBASE_ADMIN_AVAILABLE = False
+        logger.info(f'Request received (non-JSON) for url: {request.url}, method: {request.method}', extra={
+            'url': request.url,
+            'path': request.path,
+            'request_args': dict(request.args),
+            'method': request.method,
+            'headers': dict(request.headers),
+            'uid_or_role': session.get('fb_uid') or session.get('role') or None,
+            'form_data': request.form.to_dict() if request.form else None,
+            'data': request.get_data(as_text=True)
+        })
+
+@app.after_request
+def log_response(response):
+    try:
+        status = response.status_code
+    except Exception:
+        return response
+    if status >= 500:
+        logger.error('Response %s %s returned %s', request.method, request.path, status)
+    elif status >= 400:
+        logger.warning('Response %s %s returned %s', request.method, request.path, status)
+    return response
 
 def verify_firebase_token(func):
     @wraps(func)
@@ -316,33 +400,18 @@ def verify_firebase_token(func):
         return func(*args, **kwargs)
     return wrapper
 
-
-def respond_error(message, status=400, redirect_endpoint=None, redirect_kwargs=None, flash_category='warning'):
-    """Return a flash+redirect for HTML browsers or JSON+status for API clients.
-
-    - If the request accepts HTML (and is not JSON), flash the message and redirect to
-      `redirect_endpoint` (or referrer/index).
-    - Otherwise return a JSON error with the given HTTP status.
-    """
-    try:
-        wants_html = request.accept_mimetypes.accept_html and not request.is_json
-    except Exception:
-        wants_html = False
-    if wants_html:
-        try:
-            flash(message, flash_category)
-        except Exception:
-            logger.debug('flash() failed when responding with HTML error')
-        if redirect_endpoint:
-            try:
-                target = url_for(redirect_endpoint, **(redirect_kwargs or {}))
-            except Exception:
-                target = request.referrer or url_for('index')
-        else:
-            target = request.referrer or url_for('index')
-        return redirect(target)
-    return jsonify({'error': message}), status
-
+def require_race_context(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if 'race_context' not in kwargs:
+            if 'race_id' in kwargs:
+                race_id = kwargs['race_id']
+            else:
+                race_id = request.args.get('race') or request.form.get("race") or session.get('current_race_id') or CURRENT_RACE_ID
+            context = load_data(race_id=race_id)
+            kwargs['race_context'] = context
+        return func(*args, **kwargs)
+    return wrapper
 
 def require_role(min_role, redirect='login'):
     roles_order = {'VIEWER': 1, 'OWNER': 2, 'ADMIN': 3, 'JUDGE': 4}
@@ -353,7 +422,9 @@ def require_role(min_role, redirect='login'):
             role = session.get('role')
             role_race_id = session.get('role_race_id')
             race_id = request.args.get('race') or request.form.get('race') or session.get('current_race_id') or CURRENT_RACE_ID
-            logger.debug(f"require_role({min_role}) checking: role:{role} for {role_race_id}, current_race_id: {session.get('current_race_id')}")
+            uid = session.get('fb_uid')
+            email = session.get('fb_email')
+            logger.debug(f"require_role({min_role}) checking: role:{role} for {role_race_id}, race_id: {race_id}, current_race_id: {session.get('current_race_id')}")
 
             # Check for viewer:
             if min_role == 'VIEWER':
@@ -363,7 +434,7 @@ def require_role(min_role, redirect='login'):
             # Check for Judge
             if min_role in ['JUDGE'] and role and Role[role.upper()] == Role.JUDGE:
                 # ensure judge is operating on their current race only
-                if str(race_id) == str(session.get('current_race_id')) \
+                if str(race_id) == role_race_id \
                    and str(race_id) == str(role_race_id):
                     logger.debug(f"Judge {session.get('judge_name')} approved for this race {race_id}")
                     return func(*args, **kwargs)
@@ -372,7 +443,7 @@ def require_role(min_role, redirect='login'):
             if min_role in ['VIEWER', 'OWNER'] and role and Role[role.upper()] == Role.OWNER:
                 # ensure owner is operating on their current race only
                 if str(race_id) == str(session.get('current_race_id')) \
-                   and str(race_id) == str(role_race_id):
+                   and str(race_id) == role_race_id:
                     logger.debug(f"Owner approved for this race {race_id}")
                     return func(*args, **kwargs)
 
@@ -386,20 +457,6 @@ def require_role(min_role, redirect='login'):
                     return func(*args, **kwargs)
 
             # check firebase token and custom claims
-            auth_header = request.headers.get('Authorization', '')
-            m = re.match(r"Bearer\s+(.+)", auth_header)
-            if FIREBASE_ADMIN_AVAILABLE and m:
-                try:
-                    decoded = fb_auth.verify_id_token(m.group(1))
-                    # top-level admin bypass
-                    if decoded.get('isTopAdmin'):
-                        return func(*args, **kwargs)
-                    uid = decoded.get('uid')
-                except Exception as e:
-                    logger.warning('Token verify in require_role failed: %s', e, exc_info=True)
-                    return respond_error(f'Invalid token; minimum authentication required for action: {min_role}', 401, redirect_endpoint=redirect)
-            else:
-                uid = None
 
             # lookup member role
             member_role = None
@@ -416,7 +473,7 @@ def require_role(min_role, redirect='login'):
                     local = read_members_local(race_id)
                     member_role = local.get(uid, {}).get('role')
 
-            logger.debug(f"require_role({min_role}) checking: uid:{uid} member_role:{member_role}")
+            logger.debug(f"require_role({min_role}) checking: {email} ({uid}) member_role:{member_role}")
             if member_role and roles_order.get(member_role, 0) >= roles_order.get(min_role, 0):
                 logger.debug("Member approved for this race")
                 return func(*args, **kwargs)
@@ -425,58 +482,34 @@ def require_role(min_role, redirect='login'):
         return wrapper
     return decorator
 
-def members_filename_for_race(race_id):
-    return os.path.join(CONFIG_DIR, RACE_MEMBERS_FILE_TEMPLATE.format(race_id=str(race_id)))
+def respond_error(message, status=400, redirect_endpoint=None, redirect_kwargs=None, flash_category='warning'):
+    """Return a flash+redirect for HTML browsers or JSON+status for API clients.
 
-def read_members_local(race_id):
-    fname = members_filename_for_race(race_id)
+    - If the request accepts HTML (and is not JSON), flash the message and redirect to
+      `redirect_endpoint` (or referrer/index).
+    - Otherwise return a JSON error with the given HTTP status.
+    """
     try:
-        with open(fname, 'r') as f:
-            return json.load(f)
+        wants_html = request.accept_mimetypes.accept_html and not request.is_json
     except Exception:
-        return {}
-
-def write_members_local(race_id, members):
-    fname = members_filename_for_race(race_id)
-    with open(fname, 'w') as f:
-        json.dump(members, f)
-
-# Load patrol names from JSON config file
-
-
-def patrol_config_filename():
-    return os.path.join(CONFIG_DIR, PATROL_CONFIG_FILE)
-
-def auth_config_filename():
-    return os.path.join(CONFIG_DIR, AUTH_CONFIG_FILE)
-
-default_patrol_names = {
-    "1": "Foxes", 
-    "2": "Hawks", 
-    "3": "Mountain Lions", 
-    "4": "Navgators", 
-    "5": "Adventurers", 
-    "Exhibition": "Exhibition"
-}
-fn = patrol_config_filename()
-if fn and os.path.exists(fn):
-    with open(fn, 'r') as f:
-        default_patrol_names = json.load(f)
-else:
-    logger.warning("No patrol_config.json file found; using default patrol names.")
-
-auth_config = {}
-fn = auth_config_filename()
-if fn and os.path.exists(fn):
-    with open(fn, 'r') as f:
-        auth_config = json.load(f)
-else:
-    logger.warning("No auth_config.json file found; using empty config.")
-
-# DATA_FILE is per-race. Use `data_filename_for_race(race_id)` or Firestore when enabled.
+        wants_html = False
+    if wants_html:
+        try:
+            flash(message, flash_category)
+        except Exception:
+            logger.exception('flash() failed when responding with HTML error')
+        if redirect_endpoint:
+            try:
+                target = url_for(redirect_endpoint, **(redirect_kwargs or {}))
+            except Exception:
+                target = request.referrer or url_for('index')
+        else:
+            target = request.referrer or url_for('index')
+        return redirect(target)
+    return jsonify({'error': message}), status
 
 class Role(Enum):
-    PUBLIC = 0
+    VIEWER = 0
     JUDGE = 1
     OWNER = 2
     ADMIN = 3
@@ -571,25 +604,11 @@ class RaceContext:
         self.patrol_names: Dict[str, str] = patrol_names
         self.archived: bool = archived
 
-def require_race_context(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        if 'race_context' not in kwargs:
-            if 'race_id' in kwargs:
-                race_id = kwargs['race_id']
-            else:
-                race_id = session.get('current_race_id') or request.args.get('race') or request.form.get("race") or CURRENT_RACE_ID
-            context = load_data(race_id=race_id)
-            kwargs['race_context'] = context
-        return func(*args, **kwargs)
-    return wrapper
-
 
 def _race_id_from_name(name: str) -> str:
     rid = re.sub(r"[^A-Za-z0-9_-]+", '_', name)
     rid = re.sub(r'_+', '_', rid).strip('_')
     return rid[:120] or name.replace(' ', '_')
-
 
 def create_race(name):
 
@@ -629,7 +648,7 @@ def load_data(race_id=None, name=None):
     global CURRENT_RACE_ID
 
     if race_id is None:
-        race_id = CURRENT_RACE_ID
+        race_id = request.args.get('race') or request.form.get("race") or session.get('current_race_id') or CURRENT_RACE_ID
     CURRENT_RACE_ID = str(race_id)
 
     if name is None:
@@ -637,6 +656,8 @@ def load_data(race_id=None, name=None):
             name = session.get('current_race_name', str(race_id))
         except RuntimeError:
             name = str(race_id)
+
+    logger.info(f"Loading Race {name} ({race_id})")
 
     # Try in-memory cache first
     cached = get_race_cached(CURRENT_RACE_ID)
@@ -731,7 +752,7 @@ def load_data(race_id=None, name=None):
         session['current_race_id'] = context.race_id
         session['current_race_name'] = context.name
     except Exception:
-        logger.debug('Unable to set session current_race_id after firestore create')
+        logger.exception('Unable to set session current_race_id after firestore create')
 
     if resave and not archived_race:
         logger.debug(f"Saving triggered for {CURRENT_RACE_ID}")
@@ -771,102 +792,27 @@ def save_data(race_id=None, context: RaceContext=None):
     logger.info(f"Saving race {race_id}, {len(payload['participants'])} participants")
     try:
         write_race_doc(race_id=race_id, data=payload, merge=True)
-    except Exception:
-        logger.debug('Failed to save race data %s', race_id)
+    except Exception as e:
+        logger.exception('Failed to save race data %s: %s', race_id, e)
     try:
         set_race_cached(race_id, payload)
-    except Exception:
-        logger.debug('Failed to set cache after local save for %s', race_id)
+    except Exception as e:
+        logger.warning('Failed to set cache after local save for %s: %s', race_id, e)
 
 # Ensure a race is loaded at startup and allow switching via ?race=ID
 @app.before_request
-def ensure_race_loaded():
-    # Log basic request context and selected race param
-    logger.debug('Incoming request: %s %s args=%s uid=%s', request.method, request.path, dict(request.args), session.get('fb_uid'))
-
-    admin_functions = ['admin_download_race', 'admin_upload_restore', 'admin_restore_race',
-                       'admin_set_top_admin', 'admin_create_race', 'admin_archive_race',
-                       'admin_delete_race']
-    admin_function_urls=[url_for(f) for f in admin_functions]
-
-    if request.endpoint in admin_function_urls:
-        logger.debug(f"Skipping loading of current race data for admin endpoints: {request.endpoint}")
-        return
-
-    # If a race parameter is provided in the request, load that race's data
-    race_param = request.args.get('race')
-    global CURRENT_RACE_ID
-    try:
-        if race_param and race_param != CURRENT_RACE_ID:
-            logger.info('Request to switch race from %s to %s based on request param', CURRENT_RACE_ID, race_param)
-            # Only load the requested race if it already exists or the actor is authorized to create it.
-            allowed_to_create = False
-            # Determine actor privileges (session or firebase)
-            session_role = session.get('role')
-            session_is_top = session.get('isTopAdmin')
-            session_uid = session.get('fb_uid')
-            fb_user = getattr(request, 'fb_user', None)
-            if fb_user and fb_user.get('isTopAdmin'):
-                session_is_top = True
-
-            # Verify the other race exists
-            all_races = get_races_list(include_archived=False)
-            race_exists = race_param in [r['id'] for r in all_races]
-            if not race_exists:
-                race_param = DEFAULT_RACE_ID
-
-            # Allow creation only for top-level admins or users with ADMIN role
-            if session_is_top or session_role == Role.ADMIN.name:
-                allowed_to_create = True
-
-            if race_exists:
-                logger.info('Switching race to existing id %s', race_param)
-                race_context = load_data(race_param)
-                try:
-                    session['current_race_id'] = str(CURRENT_RACE_ID)
-                    session['current_race_name'] = str(race_context.name)
-                except Exception:
-                    logger.debug('Unable to set session current_race_id')
-            else:
-                if allowed_to_create:
-                    logger.info(f'Authorized actor ({session_uid}/{fb_user}/{session_role}) creating new race id {race_param}; creating data.')
-                    race_context = load_data(race_param)
-                    try:
-                        session['current_race_id'] = str(CURRENT_RACE_ID)
-                        session['current_race_name'] = str(race_context.name)
-                    except Exception:
-                        logger.debug('Unable to set session current_race_id')
-                else:
-                    msg = f"Requested race '{race_param}' does not exist and you are not authorized to create it."
-                    logger.warning('Requested race %s does not exist and actor not authorized to create it; ignoring param', race_param)
-                    try:
-                        flash(msg, 'warning')
-                    except Exception:
-                        logger.debug('flash unavailable in this context when ignoring race param %s', race_param)
-                    # Do not change CURRENT_RACE_ID; leave previous data loaded.
-    except Exception:
-        logger.exception('Error while attempting to switch race to %s', race_param)
-        traceback.print_exc()
+def populate_fb_user():
     # If a firebase session exists, populate request.fb_user for downstream checks
     try:
         if not hasattr(request, 'fb_user') and session.get('fb_uid'):
             request.fb_user = {'uid': session.get('fb_uid'), 'isTopAdmin': session.get('isTopAdmin', False), 'email': session.get('fb_email')}
-            logger.debug('Populated request.fb_user from session for uid=%s isTop=%s', request.fb_user.get('uid'), request.fb_user.get('isTopAdmin'))
     except Exception:
         logger.exception('Failed to populate fb_user from session')
-
-# Load default race at startup
-try:
-    load_data(CURRENT_RACE_ID)
-except Exception:
-    logger.exception("Encountered exception loading saved data")
-    traceback.print_exc()
-
 
 # Inject current race info into all templates
 @app.context_processor
 def inject_current_race():
-    rid = str(session.get('current_race_id') or CURRENT_RACE_ID)
+    rid = request.args.get('race') or request.form.get("race") or session.get('current_race_id') or CURRENT_RACE_ID
 
     races_data = get_races_list(include_archived=True)
     race = next((r for r in races_data if r['id'] == rid), None)
@@ -930,6 +876,11 @@ def get_races_list(include_archived=False) -> List[Dict[str, Any]]:
                     races_list.append({'id': rid, 'name': name, 'race_qr': race_qr, 'archived': True})
     return races_list
 
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
 # --- Admin UI and management endpoints ---
 @app.route('/admin/ui')
 @require_role("OWNER")
@@ -959,7 +910,7 @@ def admin_ui():
 @require_role('OWNER', redirect='admin_ui')
 def admin_set_owner_token():
     # Generate and persist a per-race owner token and optionally a QR image
-    race_id = request.form.get('race') or session.get('current_race_id') or CURRENT_RACE_ID
+    race_id = request.args.get('race') or request.form.get("race") or session.get('current_race_id') or CURRENT_RACE_ID
     token_val = uuid.uuid4().hex
     if race_id == DEFAULT_RACE_ID:
         token_val = f'{DEFAULT_RACE_ID}_token' # sample token for the DEFAULT race
@@ -983,7 +934,7 @@ def admin_set_owner_token():
     try:
         flash('Owner token generated for race ' + str(race_id), 'info')
     except Exception:
-        logger.debug('flash unavailable after creating owner token')
+        logger.exception('flash unavailable after creating owner token')
     # redirect back to the members page for the race so UI shows the new token/QR
     return redirect(url_for('admin_race_members', race_id=race_id))
 
@@ -1018,7 +969,7 @@ def admin_create_race():
     try:
         set_race_cached(race_id, payload)
     except Exception:
-        logger.debug('Failed to set cache after create for %s', race_id)
+        logger.exception('Failed to set cache after create for %s', race_id)
         logger.exception('create race error: %s', e)
         return respond_error("Error creating race", 500, 'admin_ui', flash_category='error')
     return redirect(url_for('admin_ui'))
@@ -1052,7 +1003,7 @@ def admin_race_members(race_id):
                         try:
                             os.remove(os.path.join(app.static_folder, 'qr', qr))
                         except Exception:
-                            logger.debug('Failed to remove QR file %s for removed judge %s', qr, regen_judge)
+                            logger.exception('Failed to remove QR file %s for removed judge %s', qr, regen_judge)
                     qr_fn = generate_qr(url, judges_data[regen_judge]['id'])
                     judges_data[regen_judge]['qr'] = qr_fn
                 except Exception:
@@ -1077,7 +1028,7 @@ def admin_race_members(race_id):
                         try:
                             os.remove(os.path.join(app.static_folder, 'qr', qr))
                         except Exception:
-                            logger.debug('Failed to remove QR file %s for removed judge %s', qr, remove_judge)
+                            logger.exception('Failed to remove QR file %s for removed judge %s', qr, remove_judge)
                     judges_data.pop(remove_judge, None)
                 data.pop('judges', None)
                 data.update({'judges': judges_data})
@@ -1227,7 +1178,7 @@ def _delete_qr_files_from_doc(data_doc):
                 if os.path.exists(fp):
                     os.remove(fp)
             except Exception:
-                logger.debug('Failed to remove QR file %s', fn)
+                logger.exception('Failed to remove QR file %s', fn)
     except Exception:
         logger.exception('Error while deleting QR files')
 
@@ -1256,7 +1207,7 @@ def admin_archive_race():
                 for member in db.collection('races').document(str(race_id)).collection('members').list_documents():
                     member.delete()
             except Exception:
-                logger.debug('Failed to remove members subcollection during archive for %s', race_id)
+                logger.exception('Failed to remove members subcollection during archive for %s', race_id)
         else:
             fn = data_filename_for_race(race_id)
             if not os.path.exists(fn):
@@ -1272,13 +1223,13 @@ def admin_archive_race():
             try:
                 os.remove(fn)
             except Exception:
-                logger.debug('Failed to remove original race file %s after archiving', fn)
+                logger.exception('Failed to remove original race file %s after archiving', fn)
 
         # delete QR images since they can be regenerated
         try:
             _delete_qr_files_from_doc(data)
         except Exception:
-            logger.debug('QR deletion step failed for %s', race_id)
+            logger.exception('QR deletion step failed for %s', race_id)
 
         invalidate_race_cache(race_id)
         flash(f'Race {race_id} archived', 'info')
@@ -1292,6 +1243,7 @@ def admin_archive_race():
 @require_role('ADMIN', redirect='admin_ui')
 def admin_restore_race():
     race_id = request.form.get('race') or request.json.get('race')
+    logger.info('Request to restore race %s by %s', race_id, getattr(request, 'fb_user', None) or session.get('role'))
     if not race_id:
         return respond_error('race required', 400, 'admin_ui')
     try:
@@ -1321,7 +1273,7 @@ def admin_restore_race():
             try:
                 os.remove(archive_fn)
             except Exception:
-                logger.debug('Failed to remove archive file %s after restore', archive_fn)
+                logger.exception('Failed to remove archive file %s after restore', archive_fn)
 
         invalidate_race_cache(race_id)
         flash(f'Race {race_id} restored', 'info')
@@ -1444,7 +1396,7 @@ def session_login():
     and establishes a Flask session (server-side) with uid and isTopAdmin claim."""
     data = request.get_json(silent=True) or {}
     id_token = data.get('idToken')
-    race_id = request.args.get('race') or CURRENT_RACE_ID
+    race_id = request.args.get('race') or request.form.get("race") or session.get('current_race_id') or CURRENT_RACE_ID
  
     if not FIREBASE_ADMIN_AVAILABLE:
         logger.error('session_login attempted but Firebase Admin SDK not available')
@@ -1457,7 +1409,6 @@ def session_login():
         email = decoded_token.get('email')
 
         # set session values
-        session['fb_uid'] = uid 
         session['isTopAdmin'] = decoded_token.get('isTopAdmin', False)
         if session['isTopAdmin']:
             session['role'] = Role.ADMIN.name
@@ -1508,7 +1459,7 @@ def session_login():
                             try:
                                 os.remove(os.path.join(app.static_folder, 'qr', qr))
                             except Exception:
-                                logger.debug('Failed to remove QR file %s for removed judge %s', qr, email)
+                                logger.exception('Failed to remove QR file %s for removed judge %s', qr, email)
                         qr_fn = generate_qr(url, judges_data[email]['id'])
                         judges_data[email]['qr'] = qr_fn
                     except Exception:
@@ -1518,8 +1469,22 @@ def session_login():
 
         else:
             session['role'] = Role.VIEWER.name
+        
+        if session['role'] == Role.VIEWER.name:
+            next_URL=url_for('index', race=race_id)
+        elif session['role'] == Role.JUDGE.name:
+            next_URL=url_for('judge_design', race=race_id)
+        elif session['role'] == Role.OWNER.name or session['role'] == Role.ADMIN.name:
+            next_URL=url_for('admin_ui', race=race_id)
+        else:
+            next_URL=url_for('login')
 
-        return jsonify({'ok': True, 'isTopAdmin': session.get('isTopAdmin', False)}), 200
+        return jsonify({'ok': True, 
+                        'nextURL': next_URL,
+                        'isAdminOrOwner': session.get('role', Role.VIEWER.name) in [Role.ADMIN.name, Role.OWNER.name],
+                        'message': f'Successfully logged in as role {session.get("role")} for race {race_id}. ' + \
+                            f' If an elevated account role is required, contact your race administrator.',
+                        'role': session.get('role')}), 200
     except Exception as e:
         logger.warning('session_login verify failed: %s', e, exc_info=True)
         return jsonify({ 'status': 'error', 'message': 'Unable to authenticate user'}), 401
@@ -1541,6 +1506,7 @@ def logout():
 
 
 def generate_qr(url,id):
+    #TODO: make QR codes in-memory only; generate on-demand and don't save on disk.
 
     qr = qrcode.QRCode(box_size=10, border=4)
     qr.add_data(url)
@@ -1574,6 +1540,7 @@ def login():
         try:
             rd = read_race_doc(race_id)
         except Exception:
+            logger.exception(f"Failed to load race {race_id}")
             rd = {}
         race_name = rd.get('name', race_id)
 
@@ -1588,7 +1555,7 @@ def login():
                 flash(f'Logged in as Owner for {race_name}', 'success')
             except Exception:
                 pass
-            return redirect(url_for('index'))
+            return redirect(url_for('index', race=race_id))
 
         if token == auth_config.get('owner_token'):
             session['role'] = Role.OWNER.name
@@ -1596,7 +1563,7 @@ def login():
             session['current_race_id'] = race_id
             session['current_race_name'] = race_name
             flash(f'Logged in as Owner for {race_name}', 'success')
-            return redirect(url_for('index'))
+            return redirect(url_for('index', race=race_id))
 
         # judge check (per-race then global)
         judges_data = rd.get('judges', {})
@@ -1608,7 +1575,7 @@ def login():
                 session['current_race_id'] = race_id
                 session['current_race_name'] = race_name
                 flash(f"{jname} logged in as Judge for race {race_name}", 'success')
-                return redirect(url_for('judge_design'))
+                return redirect(url_for('judge_design', race=race_id))
 
         if token == auth_config.get('judge_token'):
             session['role'] = Role.JUDGE.name
@@ -1616,7 +1583,7 @@ def login():
             session['current_race_id'] = race_id
             session['current_race_name'] = race_name
             flash(f'Logged in as Judge for {race_name}', 'success')
-            return redirect(url_for('judge_design'))
+            return redirect(url_for('judge_design', race=race_id))
 
         # global admin check
         if token == auth_config.get('admin_token'):
@@ -1626,7 +1593,7 @@ def login():
             session['current_race_id'] = race_id
             session['current_race_name'] = race_name
             flash(f'Logged in as Admin', 'success')
-            return redirect(url_for('admin_ui'))
+            return redirect(url_for('admin_ui', race=race_id))
 
 
         flash(f'Invalid token for {race_name}', 'warning')
@@ -1668,7 +1635,7 @@ def login():
 @app.route("/race_links")
 def race_links():
     races = get_races_list()
-    race_id = session.get('current_race_id') or CURRENT_RACE_ID
+    race_id = request.args.get('race') or request.form.get("race") or session.get('current_race_id') or CURRENT_RACE_ID
     race = next((r for r in races if r['id'] == race_id), None)
     if race:
         # Always regenerate, because if redirection is happening for different hosts
@@ -1684,7 +1651,12 @@ def race_links():
 @require_race_context
 def index(race_context: RaceContext):
 
+    message = request.args.get('message', None)
+
     sorted_participants = sorted(race_context.participants, key=lambda p: (p.patrol, p.car_number))
+
+    if message:
+        flash(message, 'success')
 
     return render_template("index.html", 
                            participants=sorted_participants,
@@ -1981,18 +1953,6 @@ def assign_all_lanes(race_group, round: Rounds, race_number_start, race_context:
         race_context.races.append(race)
 
 
-@app.after_request
-def log_response(response):
-    try:
-        status = response.status_code
-    except Exception:
-        return response
-    if status >= 500:
-        logger.error('Response %s %s returned %s', request.method, request.path, status)
-    elif status >= 400:
-        logger.warning('Response %s %s returned %s', request.method, request.path, status)
-    return response
-
 @app.route("/enter_times/<int:race_number>/<int:heat_number>", methods=["GET", "POST"])
 @require_role('OWNER')
 @require_race_context
@@ -2213,7 +2173,7 @@ def get_best_time_race_number(participant: Participant, race_context: RaceContex
 @require_race_context
 def judge_design(race_context: RaceContext):
 
-    race_id = session.get('current_race_id') or request.args.get('race') or request.form.get("race") or CURRENT_RACE_ID
+    race_id = request.args.get('race') or request.form.get("race") or session.get('current_race_id') or CURRENT_RACE_ID
     
     # Determine judge identity
     judge_id = None
@@ -2407,7 +2367,7 @@ def download_racer_data(participant_id, race_context: RaceContext):
 @app.route("/upload_roster", methods=["GET", "POST"])
 @require_role('OWNER')
 def upload_roster():
-    role = session.get('role', Role.PUBLIC.name)
+    role = session.get('role', Role.VIEWER.name)
     error_message = ""
 
     if Role[role] == Role.OWNER:

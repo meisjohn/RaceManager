@@ -130,7 +130,16 @@
 
                 if (res.ok) {
                     const data = await res.json();
-                    window.location.href = data.isTopAdmin ? '/admin/ui' : '/?race=' + race;
+
+                    if (data.role == 'VIEWER') {
+                        showMsg(data.message, 'is-success');
+                        setTimeout( () => { 
+                            window.location.href = data.nextURL;
+                        }, 2000);
+                    }
+                    else {
+                        window.location.href = data.nextURL;
+                    }
                 } else {
                     const data = await res.json();
                     showMsg('Server failed to verify session: ' + data.message, 'is-danger');
