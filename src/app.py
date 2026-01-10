@@ -385,7 +385,7 @@ def publish_invalidated_cache(race_id):
     else:
         logger.debug("Zenoh session invalid, not publishing invalidate cache message for race id {race_id}.")
 
-def receive_race_data(sample: zenoh.Sample):
+def receive_race_data(sample):
     sample_sender_id = json.loads(sample.attachment.to_string()).get("SENDER_ID")
     if SENDER_ID == sample_sender_id:
         return
@@ -394,7 +394,7 @@ def receive_race_data(sample: zenoh.Sample):
 
     set_race_cached(payload['race_id'], payload['data'], publish=False)
 
-def receive_invalidate_cache(sample: zenoh.Sample):
+def receive_invalidate_cache(sample):
     sample_sender_id = json.loads(sample.attachment.to_string()).get("SENDER_ID")
     if SENDER_ID == sample_sender_id:
         return
