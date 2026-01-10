@@ -49,6 +49,8 @@ class JSONFormatter(logging.Formatter):
             "lineno": record.lineno,
         }
         # include request id if present
+        if hasattr(record, 'request_info'):
+            log_record['request_info'] = dict(record.request_info)
         if hasattr(record, 'request_id') and record.request_id:
             log_record['request_id'] = record.request_id
         if record.exc_info:
@@ -345,30 +347,36 @@ def log_request_info():
         # Don't log static artifact queries
         return
     if request.is_json:
-        logger.info(f'Request received for url: {request.url}, method: {request.method}', extra={
+        logger.info(f'Request received for url: {request.url}, method: {request.method}', extra={'request_info':{
             'url': request.url,
             'path': request.path,
             'request_args': dict(request.args),
             'method': request.method,
             'headers': dict(request.headers),
-            'uid_or_role': session.get('fb_uid') or session.get('role') or None,
+            'uid': session.get('fb_uid') or None,
+            'role': session.get('role') or None,
+            'role_race_id': session.get('role_race_id') or None,
+            'race_id': session.get('current_race_id') or CURRENT_RACE_ID,
             'form_data': request.form.to_dict() if request.form else None,
             'json_body': request.get_json(silent=True) # Use silent=True to avoid errors if not a valid JSON
-        })
+        }})
     else:
-        logger.info(f'Request received (non-JSON) for url: {request.url}, method: {request.method}', extra={
+        logger.info(f'Request received (non-JSON) for url: {request.url}, method: {request.method}', extra={'request_info': {
             'url': request.url,
             'path': request.path,
             'request_args': dict(request.args),
             'method': request.method,
             'headers': dict(request.headers),
-            'uid_or_role': session.get('fb_uid') or session.get('role') or None,
+            'uid': session.get('fb_uid') or None,
+            'role': session.get('role') or None,
+            'role_race_id': session.get('role_race_id') or None,
+            'race_id': session.get('current_race_id') or CURRENT_RACE_ID,
             'form_data': request.form.to_dict() if request.form else None,
             'data': request.get_data(as_text=True)
-        })
+        }})
 
 @app.after_request
-def log_response(response):
+def log_response(response:Response):
     try:
         status = response.status_code
     except Exception:
