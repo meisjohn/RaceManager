@@ -125,11 +125,16 @@ ZENOH_CONFIG = os.environ.get("ZENOH_CONFIG")
 
 try:
     import zenoh
-    z_conf = zenoh.Config()
+    zenoh.init_log_from_env_or("info")
     if ZENOH_CONFIG and os.path.exists(ZENOH_CONFIG):
-        z_conf.from_file(ZENOH_CONFIG)
+        logger.info(f"Loading zenoh config from {ZENOH_CONFIG}")
+        z_conf = zenoh.Config.from_file(ZENOH_CONFIG)
+    else:
+        logger.info(f"Loading default zenoh config")
+        z_conf = zenoh.Config()
     zenoh_session = zenoh.open(z_conf)
 except:
+    logger.exception("Failed to initialize Zenoh")
     zenoh_session = None
 
 def data_filename_for_race(race_id):
@@ -358,6 +363,7 @@ def publish_race_data(race_id, race_data: Dict[str, Any]):
         try:
             payload={'race_id': race_id, 'data': race_data}
             zenoh_session.put(TOPIC_RACE_DATA, json.dumps(payload), attachment=json.dumps({"SENDER_ID": SENDER_ID}))
+            logger.debug(f"Sender {SENDER_ID} published race id {race_id} to Zenoh with topic {TOPIC_RACE_DATA}")
         except:
             logger.exception(f"Sender {SENDER_ID} unable to publish race id {race_id} to Zenoh with topic {TOPIC_RACE_DATA}")
     else:
@@ -367,6 +373,7 @@ def publish_invalidated_cache(race_id):
     if zenoh_session:
         try:
             zenoh_session.put(TOPIC_INVALIDATE_CACHE, race_id, attachment=json.dumps({"SENDER_ID": SENDER_ID}))
+            logger.debug(f"Sender {SENDER_ID} published invalidate cache for race id {race_id} to Zenoh with topic {TOPIC_INVALIDATE_CACHE}")
         except:
             logger.exception(f"Sender {SENDER_ID} unable to publish invalidate cache for race id {race_id} to Zenoh with topic {TOPIC_INVALIDATE_CACHE}")
     else:

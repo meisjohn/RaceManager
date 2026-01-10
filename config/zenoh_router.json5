@@ -1,0 +1,16 @@
+{
+  // The router's mode is always "router"
+  mode: "router",
+  
+  // Configure where the router listens for incoming connections
+  listen: {
+    endpoints: ["tcp/0.0.0.0:7447"]
+  },
+
+  // Disable multicast discovery
+  scouting: {
+    multicast: {
+      enabled: false
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  // "client" mode requires a connection to a router to communicate
+  mode: "client",
+  
+  // Explicitly connect to the router's IP and Port
+  connect: {
+    endpoints: ["tcp/127.0.0.1:7447"]
+  },
+
+  // Disable multicast so it doesn't try to find other routers
+  scouting: {
+    multicast: {
+      enabled: false
+    }
+  }
+}
