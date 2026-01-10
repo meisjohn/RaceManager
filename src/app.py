@@ -122,20 +122,26 @@ TOPIC_RACE_DATA = "racemanager/race_data"
 TOPIC_INVALIDATE_CACHE = "racemanager/invalidate_cache"
 SENDER_ID = uuid.uuid4().hex # This will be unique for each PID
 ZENOH_CONFIG = os.environ.get("ZENOH_CONFIG")
+ZENOH_ENABLED = os.environ.get("ZENOH_ENABLED", "0").lower() in ("1", "true", "yes")
 
-try:
-    import zenoh
-    zenoh.init_log_from_env_or("info")
-    if ZENOH_CONFIG and os.path.exists(ZENOH_CONFIG):
-        logger.info(f"Loading zenoh config from {ZENOH_CONFIG}")
-        z_conf = zenoh.Config.from_file(ZENOH_CONFIG)
-    else:
-        logger.info(f"Loading default zenoh config")
-        z_conf = zenoh.Config()
-    zenoh_session = zenoh.open(z_conf)
-except:
-    logger.exception("Failed to initialize Zenoh")
+if ZENOH_ENABLED:
+    try:
+        import zenoh
+        zenoh.init_log_from_env_or("info")
+        if ZENOH_CONFIG and os.path.exists(ZENOH_CONFIG):
+            logger.info(f"Loading zenoh config from {ZENOH_CONFIG}")
+            z_conf = zenoh.Config.from_file(ZENOH_CONFIG)
+        else:
+            logger.info(f"Loading default zenoh config")
+            z_conf = zenoh.Config()
+        zenoh_session = zenoh.open(z_conf)
+    except:
+        logger.exception("Failed to initialize Zenoh")
+        zenoh_session = None
+else:
+    logger.info("Zenoh messaging has been disabled")
     zenoh_session = None
+
 
 def data_filename_for_race(race_id):
     return os.path.join(CONFIG_DIR, DATA_FILE_TEMPLATE.format(race_id=str(race_id)))
