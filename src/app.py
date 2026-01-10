@@ -117,6 +117,21 @@ RACE_MEMBERS_FILE_TEMPLATE = "race_members_{race_id}.json"
 PATROL_CONFIG_FILE = "patrol_config.json"
 AUTH_CONFIG_FILE = "auth_config.json"
 
+# Messaging constants
+TOPIC_RACE_DATA = "racemanager/race_data"
+TOPIC_INVALIDATE_CACHE = "racemanager/invalidate_cache"
+SENDER_ID = uuid.uuid4().hex # This will be unique for each PID
+ZENOH_CONFIG = os.environ.get("ZENOH_CONFIG")
+
+try:
+    import zenoh
+    z_conf = zenoh.Config()
+    if ZENOH_CONFIG and os.path.exists(ZENOH_CONFIG):
+        z_conf.from_file(ZENOH_CONFIG)
+    zenoh_session = zenoh.open(z_conf)
+except:
+    zenoh_session = None
+
 def data_filename_for_race(race_id):
     return os.path.join(CONFIG_DIR, DATA_FILE_TEMPLATE.format(race_id=str(race_id)))
 
@@ -215,7 +230,7 @@ def get_race_cached(race_id, ttl=None):
     logger.debug('Cache hit for race %s (age=%.1fs)', race_id, age)
     return entry.get('data')
 
-def set_race_cached(race_id, data):
+def set_race_cached(race_id, data: Dict[str, Any], publish=True):
     try:
         with _get_race_lock(race_id):
             #logger.debug(f"data: {data}")
@@ -224,13 +239,18 @@ def set_race_cached(race_id, data):
     except Exception:
         logger.exception('Failed to set in-memory cache for race %s', race_id)
 
-def invalidate_race_cache(race_id):
+    if publish:
+        publish_race_data(race_id, data)
+
+def invalidate_race_cache(race_id, publish=True):
     try:
         with _get_race_lock(race_id):
             _race_cache.pop(race_id, None)
             logger.info('Invalidated in-memory cache for race %s', race_id)
     except Exception:
         logger.exception('Failed to invalidate cache for race %s', race_id)
+    if publish:
+        publish_invalidated_cache(race_id)
 
 def read_race_doc(race_id, include_archive=False):
     """Return the race-level document/data dict from Firestore or local file."""
@@ -279,6 +299,7 @@ def write_race_doc(race_id, data, merge=False):
     If merge is True, perform a shallow merge of keys into existing data.
     Returns True on success, False on failure.
     """
+
     try:
         if USE_FIRESTORE and FIRESTORE_AVAILABLE:
             try:
@@ -331,6 +352,48 @@ def write_members_local(race_id, members):
     fname = members_filename_for_race(race_id)
     with open(fname, 'w') as f:
         json.dump(members, f)
+
+def publish_race_data(race_id, race_data: Dict[str, Any]):
+    if zenoh_session:
+        try:
+            payload={'race_id': race_id, 'data': race_data}
+            zenoh_session.put(TOPIC_RACE_DATA, json.dumps(payload), attachment=json.dumps({"SENDER_ID": SENDER_ID}))
+        except:
+            logger.exception(f"Sender {SENDER_ID} unable to publish race id {race_id} to Zenoh with topic {TOPIC_RACE_DATA}")
+    else:
+        logger.debug("Zenoh session invalid, not publishing race id {race_id}")
+
+def publish_invalidated_cache(race_id):
+    if zenoh_session:
+        try:
+            zenoh_session.put(TOPIC_INVALIDATE_CACHE, race_id, attachment=json.dumps({"SENDER_ID": SENDER_ID}))
+        except:
+            logger.exception(f"Sender {SENDER_ID} unable to publish invalidate cache for race id {race_id} to Zenoh with topic {TOPIC_INVALIDATE_CACHE}")
+    else:
+        logger.debug("Zenoh session invalid, not publishing invalidate cache message for race id {race_id}.")
+
+def receive_race_data(sample: zenoh.Sample):
+    sample_sender_id = json.loads(sample.attachment.to_string()).get("SENDER_ID")
+    if SENDER_ID == sample_sender_id:
+        return
+    payload = json.loads(sample.payload.to_string())
+    logging.info(f"Sender ID {SENDER_ID} received race data for race_id {payload['race_id']} from {sample_sender_id}")
+
+    set_race_cached(payload['race_id'], payload['data'], publish=False)
+
+def receive_invalidate_cache(sample: zenoh.Sample):
+    sample_sender_id = json.loads(sample.attachment.to_string()).get("SENDER_ID")
+    if SENDER_ID == sample_sender_id:
+        return
+    race_id = sample.payload.to_string()
+    logging.info(f"Sender ID {SENDER_ID} received race data for race_id {'race_id'} from {sample_sender_id}")
+
+    invalidate_race_cache(race_id, publish=False)
+
+# This needs to be after the declaration of the functions above:
+if zenoh_session:
+    zenoh_session.declare_subscriber(TOPIC_RACE_DATA, receive_race_data)
+    zenoh_session.declare_subscriber(TOPIC_INVALIDATE_CACHE, receive_invalidate_cache)
 
 @app.before_request
 def ensure_request_id():
@@ -688,6 +751,21 @@ def load_data(race_id=None, name=None):
         else:
             logger.debug('Loaded race %s from storage', CURRENT_RACE_ID)
 
+    context=_convert_race_context(CURRENT_RACE_ID, name, data)
+
+    try:
+        session['current_race_id'] = context.race_id
+        session['current_race_name'] = context.name
+    except Exception:
+        logger.exception('Unable to set session current_race_id after firestore create')
+
+    if resave and not archived_race:
+        logger.debug(f"Saving triggered for {CURRENT_RACE_ID}")
+        save_data(CURRENT_RACE_ID, context=context)
+
+    return context
+
+def _convert_race_context(race_id:str, name:str, data: dict) -> RaceContext:
 
     context = RaceContext(
         race_id=CURRENT_RACE_ID, 
@@ -755,17 +833,7 @@ def load_data(race_id=None, name=None):
         if p.participant_id not in context.designs:
             resave = True
             context.designs[p.participant_id] = Design(p)
-
-    try:
-        session['current_race_id'] = context.race_id
-        session['current_race_name'] = context.name
-    except Exception:
-        logger.exception('Unable to set session current_race_id after firestore create')
-
-    if resave and not archived_race:
-        logger.debug(f"Saving triggered for {CURRENT_RACE_ID}")
-        save_data(CURRENT_RACE_ID, context=context)
-
+    
     return context
 
 def save_data(race_id=None, context: RaceContext=None):
@@ -2485,3 +2553,4 @@ if __name__ == "__main__":
     # In production use Gunicorn: `gunicorn RaceManager.app:app` (the block below won't run).
     debug_mode = os.environ.get('FLASK_DEBUG', os.environ.get('DEBUG', '0')).lower() in ('1', 'true', 'yes')
     app.run(host='0.0.0.0', debug=debug_mode)
+
