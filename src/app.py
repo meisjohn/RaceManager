@@ -1149,7 +1149,7 @@ def admin_race_members(race_id):
 
         # Handle restore
         if restore_uid:
-            logger.info('Restore member %s requested for race %s by %s', restore_uid, race_id, user.get('uid'))
+            logger.info('Restore member %s requested for race %s by %s', restore_uid, race_id, user.get('uid') if user else session.get('fb_uid'))
             if USE_FIRESTORE and FIRESTORE_AVAILABLE:
                 try:
                     db = _gcf.Client()
@@ -1168,7 +1168,7 @@ def admin_race_members(race_id):
 
         # Handle soft-delete
         if delete_uid:
-            logger.info('Soft-delete member %s requested for race %s by %s', delete_uid, race_id, user.get('uid'))
+            logger.info('Soft-delete member %s requested for race %s by %s', delete_uid, race_id, user.get('uid') if user else session.get('fb_uid'))
             if USE_FIRESTORE and FIRESTORE_AVAILABLE:
                 try:
                     db = _gcf.Client()
@@ -1190,7 +1190,7 @@ def admin_race_members(race_id):
             logger.warning('admin_race_members missing uid or role; request by %s race=%s', user.get('uid') if user else session.get('fb_uid'), race_id)
             return respond_error('UID and role required', 400, 'admin_race_members', {'race_id': race_id})
         
-        logger.info('Assigning role %s to uid %s for race %s by %s', role, uid, race_id, user.get('uid'))
+        logger.info('Assigning role %s to uid %s for race %s by %s', role, uid, race_id, user.get('uid') if user else session.get('fb_uid'))
         
         update_data = {'role': role}
         if email:
@@ -1516,6 +1516,17 @@ def session_login():
                     mdoc = db.collection('races').document(str(race_id)).collection('members').document(uid).get()
                     if mdoc.exists:
                         members[uid] = mdoc.to_dict()
+                    else:
+                        members[uid] = {"role": "VIEWER",
+                                        "email": email,
+                                        "updatedAt": _gcf.SERVER_TIMESTAMP,
+                                        "createdAt": _gcf.SERVER_TIMESTAMP
+                                        }
+                        try:
+                            db.collection('races').document(race_id).collection('members').document(uid).set(members[uid], merge=True)
+                        except Exception:
+                            logger.exception('Failed to initialize member data for uid %s', uid)
+
                 except Exception:
                     logger.exception('Failed to preload member data for uid %s', uid)
             else:
