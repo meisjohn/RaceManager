@@ -187,7 +187,7 @@ default_patrol_names = {
     "3": "Mountain Lions", 
     "4": "Navgators", 
     "5": "Adventurers", 
-    "Exhibition": "Exhibition"
+    "Exhibition": "Leaders"
 }
 fn = patrol_config_filename()
 if fn and os.path.exists(fn):

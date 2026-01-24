@@ -37,7 +37,7 @@
                                                 <div class="is-size-5 mb-2">{{ heat.lanes.get(lane).first_name }} {{ heat.lanes.get(lane).last_name }}</div>
                                                 <div class="field">
                                                     <div class="control">
-                                                        <input class="input has-text-centered" type="number" step="0.001" name="time_race_{{ race.race_number }}_heat_{{ heat.heat_number }}_lane_{{ lane }}" value="{% if heat.times.get(lane) %}{{ heat.times[lane] }}{% endif %}" {{-focus-}} {{disabled}}>
+                                                        <input class="input is-size-5 has-text-weight-bold has-text-centered" type="number" step="0.001" name="time_race_{{ race.race_number }}_heat_{{ heat.heat_number }}_lane_{{ lane }}" value="{% if heat.times.get(lane) %}{{ heat.times[lane] }}{% endif %}" {{-focus-}} {{disabled}}>
                                                     </div>
                                                 </div>
                                                 {% set focus = '' %}
