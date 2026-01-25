@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section">
+    <div class="container">
+        <h1 class="title">Awards Ceremony</h1>
+        
+        {% for pid, data in patrol_awards.items() %}
+        <details class="patrol-section">
+            <summary class="is-size-5">{{ data.name }}</summary>
+            <div class="content-wrapper">
+                
+                <h3 class="subtitle mt-4">Design Awards</h3>
+                <div class="columns is-multiline is-centered">
+                    <!-- Display 3rd, 2nd, 1st -->
+                    {% for p in data.design|reverse %}
+                        {% set rank = data.design|length - loop.index0 %}
+                        <div class="column is-12-mobile is-5-tablet is-3-desktop">
+                            <details class="card" style="height: 100%;">
+                                <summary class="card-header is-fullwidth has-background-info-light">
+                                    <p class="card-header-title is-size-4 has-text-centered is-block">{% if rank == 1 %}🥇 First{% elif rank == 2 %}🥈 Second {% elif rank == 3 %}🥉 Third{% else %}{{rank}}{% endif %} Place</p>
+                                </summary>
+                                <div class="card-content">
+                                    <div class="content">
+                                        <p class="subtitle is-size-4 has-text-centered"><strong>{{ p.first_name }} {{ p.last_name }}</strong></p>
+                                    </div>
+                                </div>
+                            </details>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <h3 class="subtitle">Speed Awards</h3>
+                <div class="columns is-multiline is-centered">
+                    {% for p in data.speed|reverse %}
+                        {% set rank = data.speed|length - loop.index0 %}
+                        <div class="column is-12-mobile is-5-tablet is-3-desktop">
+                            <details class="card" style="height: 100%;">
+                                <summary class="card-header is-fullwidth has-background-info-light">
+                                    <p class="card-header-title is-size-4 has-text-centered is-block">{% if rank == 1 %}🥇 First{% elif rank == 2 %}🥈 Second {% elif rank == 3 %}🥉 Third{% else %}{{rank}}{% endif %} Place</p>
+                                </summary>
+                                <div class="card-content">
+                                    <div class="content">
+                                        <p class="subtitle is-size-4 has-text-centered"><strong>{{ p.first_name }} {{ p.last_name }}</strong></p>
+                                        <p class="subtitle is-5 has-text-centered">Average Time: <strong>{{ "{:.3f}".format(p.average_time) }}s</strong></p>
+                                    </div>
+                                </div>
+                            </details>
+                        </div>
+                    {% endfor %}
+                </div>
+
+            </div>
+        </details>
+        {% endfor %}
+
+        <details class="patrol-section">
+            <summary class="is-size-5">Overall Speed Champions</summary>
+            <div class="content-wrapper">
+                <p class="has-text-centered mb-4 mt-4">Top racer from each patrol</p>
+                <div class="columns is-multiline is-centered">
+                    {% for p in overall_racers|reverse %}
+                        {% set rank = overall_racers|length - loop.index0 %}
+                        <div class="column is-12-mobile is-5-tablet is-3-desktop">
+                            <details class="card" style="height: 100%;">
+                                <summary class="card-header is-fullwidth has-background-info-light">
+                                    <p class="card-header-title is-size-4 has-text-centered is-block">{% if rank == 1 %}First{% elif rank == 2 %}Second{% elif rank == 3 %}Third{% elif rank == 4 %}Fourth{% elif rank == 5 %}Fifth{% else %}{{rank}}{% endif %} Place</p>
+                                </summary>
+                                <div class="card-content">
+                                    <div class="content">
+                                        <p class="subtitle is-size-4 has-text-centered"><strong>{{ p.first_name }} {{ p.last_name }}</strong></p>
+                                        <p class="subtitle is-5 has-text-centered is-italic">{{ patrol_names[p.patrol] }}</p>
+                                        <p class="subtitle is-5 has-text-centered">Average Time: <strong>{{ "{:.3f}".format(p.average_time) }}s</strong></p>
+                                    </div>
+                                </div>
+                            </details>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </details>
+
+    </div>
+</section>
+{% endblock %}

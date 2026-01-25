@@ -185,7 +185,7 @@ default_patrol_names = {
     "1": "Foxes", 
     "2": "Hawks", 
     "3": "Mountain Lions", 
-    "4": "Navgators", 
+    "4": "Navigators", 
     "5": "Adventurers", 
     "Exhibition": "Leaders"
 }
@@ -2135,7 +2135,7 @@ def check_races_scheduled(patrol, round, race_context: RaceContext):
 @require_race_context
 def check_round_complete(round, race_context: RaceContext):
     for p in race_context.patrol_names:
-        if p == "Exhibition":
+        if round == Rounds.SEMI and p == "Exhibition":
             race_context.semi_final_races_completed[p] = True
         else:
             complete = check_races_complete(p, round, race_context=race_context)
@@ -2405,6 +2405,63 @@ def display_results(race_context: RaceContext):
                            patrol_names=race_context.patrol_names,
                            patrol=patrol)
 
+@app.route("/awards")
+@require_race_context
+def awards(race_context: RaceContext):
+    # Ensure stats are calculated
+    valid_participants = [p for p in race_context.participants if p.times]
+    for p in valid_participants:
+        calculate_race_statistics(p, race_context=race_context)
+
+    patrol_awards = {}
+    # Sort patrols by index, Exhibition first.
+    sorted_patrols = sorted(race_context.patrol_names.items(), key=lambda x: (x[0] != "Exhibition", x[0]))
+
+    for pid, pname in sorted_patrols:
+        if not race_context.initial_races_completed.get(pid, False):
+            continue
+        elif pid != "Exhibition" and not race_context.semi_final_races_completed.get(pid, False):
+            continue
+
+        # Speed: Top 3 based on average time
+        patrol_racers = [p for p in valid_participants if p.patrol == pid]
+        patrol_racers.sort(key=lambda x: (x.average_time, x.best_time))
+        speed_winners = patrol_racers[:3] # [1st, 2nd, 3rd]
+
+        # Design: Top 3 based on score
+        patrol_designs = []
+        all_patrol_participants = [p for p in race_context.participants if p.patrol == pid]
+        for p in all_patrol_participants:
+             if p.participant_id in race_context.designs:
+                d_score = score_design(race_context.designs[p.participant_id])
+                patrol_designs.append((p, d_score))
+        
+        # Sort by score desc
+        patrol_designs.sort(key=lambda x: (-x[1][0], -x[1][1], -x[1][2], -x[1][3]))
+        design_winners = [x[0] for x in patrol_designs[:3]] # [1st, 2nd, 3rd]
+
+        patrol_awards[pid] = {
+            'name': pname,
+            'speed': speed_winners,
+            'design': design_winners
+        }
+
+    # Overall: Top racer from each patrol (excluding Exhibition)
+    overall_racers = []
+    if all(race_context.semi_final_races_completed.values()):
+        for pid, data in patrol_awards.items():
+            if pid == 'Exhibition': continue
+            if data['speed']:
+                overall_racers.append(data['speed'][0])
+    
+    # Sort by time (Fastest to Slowest)
+    overall_racers.sort(key=lambda x: (x.average_time, x.best_time))
+
+    return render_template("awards.html", 
+                           patrol_awards=patrol_awards, 
+                           overall_racers=overall_racers,
+                           patrol_names=race_context.patrol_names)
+
 @app.route("/download_results")
 @require_race_context
 def download_results(race_context: RaceContext):
@@ -2577,4 +2634,3 @@ if __name__ == "__main__":
     # In production use Gunicorn: `gunicorn RaceManager.app:app` (the block below won't run).
     debug_mode = os.environ.get('FLASK_DEBUG', os.environ.get('DEBUG', '0')).lower() in ('1', 'true', 'yes')
     app.run(host='0.0.0.0', debug=debug_mode)
-
