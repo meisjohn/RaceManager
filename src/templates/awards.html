@@ -3,6 +3,10 @@
 <section class="section">
     <div class="container">
         <h1 class="title">Awards Ceremony</h1>
+        <div class="buttons">
+            <button id="open-all-btn" class="button is-info is-light">Open All</button>
+            <button id="close-all-btn" class="button is-light">Close All</button>
+        </div>
         
         {% for pid, data in patrol_awards.items() %}
         <details class="patrol-section">
@@ -96,4 +100,14 @@
 
     </div>
 </section>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('open-all-btn').addEventListener('click', () => {
+            document.querySelectorAll('details').forEach(el => el.open = true);
+        });
+        document.getElementById('close-all-btn').addEventListener('click', () => {
+            document.querySelectorAll('details').forEach(el => el.open = false);
+        });
+    });
+</script>
 {% endblock %}
