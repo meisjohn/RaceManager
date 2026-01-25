@@ -2,7 +2,7 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="container">
-  <h1 class="title">Admin — Members for {{ race_id }}</h1>
+  <h1 class="title">Admin — Manage Race: {{ race_id }}</h1>
 
   {% if archived: %}
       {% set disabled='disabled' %}
@@ -10,6 +10,52 @@
       {% set disabled='' %}
   {% endif %}
 
+  <!-- Race Configuration Section -->
+  <section class="box">
+    <h2 class="subtitle">Race Configuration</h2>
+    <p class="mb-4">Manage the number of track lanes and the patrol groups for this race.</p>
+    
+    <form method="post" action="{{ url_for('admin_race_manage', race_id=race_id) }}">
+      <input type="hidden" name="update_config" value="1">
+      
+      <div class="field">
+        <label class="label">Number of Lanes</label>
+        <div class="control">
+          <input class="input" type="number" name="num_lanes" value="{{ race_context.num_lanes }}" style="max-width: 100px;" {{disabled}}>
+        </div>
+      </div>
+
+      <label class="label">Patrols</label>
+      <div id="patrols-container">
+        {% for pid, pname in race_context.patrol_names.items() %}
+        <div class="field has-addons patrol-entry mb-2">
+          <div class="control is-expanded">
+            <input class="input" type="text" name="patrol_name_{{ pid }}" value="{{ pname }}" {{disabled}}>
+          </div>
+          <div class="control">
+            <a class="button is-static">ID: {{ pid }}</a>
+          </div>
+          {% if pid != 'Exhibition' and not archived %}
+          <div class="control">
+            <button type="button" class="button is-danger remove-patrol" {{disabled}}>Remove</button>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+
+      {% if not archived %}
+      <div class="field">
+        <div class="control">
+          <button type="button" id="add-patrol" class="button is-info is-small">Add Patrol</button>
+        </div>
+      </div>
+      <div class="control mt-4">
+        <button class="button is-primary" type="submit" {{disabled}}>Update Configuration</button>
+      </div>
+      {% endif %}
+    </form>
+  </section>
 
   <div class="columns">
     <div class="column is-two-thirds">
@@ -54,12 +100,12 @@
                 <td>{% if deleted %}<span class="tag is-danger">Deleted</span> {{ deletedAt }}{% else %}<span class="tag is-success">Active</span>{% endif %}</td>
                 <td>
                   {% if deleted %}
-                    <form method="post" style="display:inline" action="{{ url_for('admin_race_members', race_id=race_id) }}">
+                    <form method="post" style="display:inline" action="{{ url_for('admin_race_manage', race_id=race_id) }}">
                       <input type="hidden" name="restore_uid" value="{{ uid }}" {{disabled}}>
                       <button class="button is-small is-warning" type="submit" {{disabled}}>Restore</button>
                     </form>
                   {% else %}
-                    <form method="post" style="display:inline" action="{{ url_for('admin_race_members', race_id=race_id) }}">
+                    <form method="post" style="display:inline" action="{{ url_for('admin_race_manage', race_id=race_id) }}">
                       <input type="hidden" name="delete_uid" value="{{ uid }}" {{disabled}}>
                       <button class="button is-small is-danger" type="submit" {{disabled}}>Remove</button>
                     </form>
@@ -162,4 +208,35 @@
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const addPatrolBtn = document.getElementById('add-patrol');
+    if (!addPatrolBtn) return;
+
+    const patrolsContainer = document.getElementById('patrols-container');
+
+    addPatrolBtn.addEventListener('click', function () {
+        // Calculate next ID based on existing IDs in the DOM
+        let maxId = 0;
+        document.querySelectorAll('.patrol-entry .button.is-static').forEach(el => {
+            const text = el.textContent.replace('ID: ', '').trim();
+            const id = parseInt(text);
+            if (!isNaN(id) && id > maxId) maxId = id;
+        });
+        const nextId = maxId + 1;
+
+        const div = document.createElement('div');
+        div.className = 'field has-addons patrol-entry mb-2';
+        div.innerHTML = `<div class="control is-expanded"><input class="input" type="text" name="patrol_name_${nextId}" placeholder="New Patrol Name"></div><div class="control"><a class="button is-static">ID: ${nextId}</a></div><div class="control"><button type="button" class="button is-danger remove-patrol">Remove</button></div>`;
+        patrolsContainer.appendChild(div);
+    });
+
+    patrolsContainer.addEventListener('click', function (e) {
+        if (e.target.classList.contains('remove-patrol')) {
+            e.target.closest('.patrol-entry').remove();
+        }
+    });
+});
+</script>
 {% endblock %}

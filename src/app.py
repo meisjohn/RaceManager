@@ -158,7 +158,7 @@ def patrol_config_filename():
 def auth_config_filename():
     return os.path.join(CONFIG_DIR, AUTH_CONFIG_FILE)
 
-NUM_LANES = os.environ.get("NUM_LANES", 4)
+NUM_LANES = int(os.environ.get("NUM_LANES", 4))
 
 # Initialize Firebase Admin SDK for auth (used to verify ID tokens and set custom claims).
 FIREBASE_ADMIN_AVAILABLE = False
@@ -675,7 +675,7 @@ class Design:
 class RaceContext:
     def __init__(self, race_id=DEFAULT_RACE_ID, name=DEFAULT_RACE_ID, participants=[], races=[], designs={}, judges={},
                  initial_races_completed={}, semi_final_races_completed={},
-                 judging_active=True, patrol_names = default_patrol_names, archived=False):
+                 judging_active=True, patrol_names = default_patrol_names, num_lanes=NUM_LANES, archived=False):
         self.race_id: str = race_id
         self.name: str = name
         self.participants: List[Participant] = participants
@@ -686,6 +686,7 @@ class RaceContext:
         self.semi_final_races_completed: Dict[str, bool] = semi_final_races_completed
         self.judging_active: bool = judging_active
         self.patrol_names: Dict[str, str] = patrol_names
+        self.num_lanes: int = num_lanes
         self.archived: bool = archived
 
 
@@ -715,7 +716,8 @@ def create_race(name):
         'judging_active': True,
         'initial_races_completed': {p: False for p in default_patrol_names},
         'semi_final_races_completed': {p: False for p in default_patrol_names if p != 'Exhibition'},
-        'patrol_names': default_patrol_names
+        'patrol_names': default_patrol_names,
+        'num_lanes': NUM_LANES
     }
 
     if USE_FIRESTORE and FIRESTORE_AVAILABLE:
@@ -791,6 +793,7 @@ def _convert_race_context(race_id:str, name:str, data: dict) -> RaceContext:
         semi_final_races_completed=data.get('semi_final_races_completed', {}),
         judging_active=data.get('judging_active', True), 
         patrol_names=dict(sorted(data.get('patrol_names', default_patrol_names).items())),
+        num_lanes=data.get('num_lanes', NUM_LANES),
         archived=data.get('archived', False))
     
 
@@ -872,7 +875,8 @@ def save_data(race_id=None, context: RaceContext=None):
             'judging_active': context.judging_active,
             'initial_races_completed': context.initial_races_completed,
             'semi_final_races_completed': context.semi_final_races_completed,
-            'patrol_names': context.patrol_names
+            'patrol_names': context.patrol_names,
+            'num_lanes': context.num_lanes
         }
     else:
         logger.error('No context provided to save_data')
@@ -1063,15 +1067,52 @@ def admin_create_race():
         return respond_error("Error creating race", 500, 'admin_ui', flash_category='error')
     return redirect(url_for('admin_ui'))
 
-@app.route('/admin/races/<race_id>/members', methods=['GET', 'POST'])
+@app.route('/admin/races/<race_id>/manage', methods=['GET', 'POST'])
 @require_role('OWNER', redirect='admin_ui')
-def admin_race_members(race_id):
+def admin_race_manage(race_id):
     user = getattr(request, 'fb_user', None)
-    logger.info('admin_race_members access for race %s by %s', race_id, (user.get('uid') if user else session.get('role')))
+    logger.info('admin_race_manage access for race %s by %s', race_id, (user.get('uid') if user else session.get('role')))
 
     if request.method == 'POST':
         # normalize JSON body if provided (silent to avoid 415 on form posts)
         json_body = request.get_json(silent=True) or {}
+
+        # Handle config update
+        if request.form.get('update_config') or json_body.get('update_config'):
+            context = load_data(race_id)
+            try:
+                context.num_lanes = int(request.form.get('num_lanes') or json_body.get('num_lanes') or context.num_lanes)
+            except ValueError:
+                pass
+
+            # Handle patrols
+            new_patrols = {}
+            # Iterate form keys to find patrol_name_<id>
+            for key in request.form:
+                if key.startswith('patrol_name_'):
+                    pid = key[len('patrol_name_'):]
+                    if pid == 'Exhibition': continue
+                    val = request.form[key].strip()
+                    if val:
+                        new_patrols[pid] = val
+            
+            # Ensure Exhibition
+            ex_val = request.form.get('patrol_name_Exhibition') or context.patrol_names.get('Exhibition', 'Leaders')
+            new_patrols['Exhibition'] = ex_val
+
+            # Update completion flags for new keys
+            new_keys = set(new_patrols.keys())
+            for k in new_keys:
+                if k not in context.initial_races_completed:
+                    context.initial_races_completed[k] = False
+                if k != 'Exhibition' and k not in context.semi_final_races_completed:
+                    context.semi_final_races_completed[k] = False
+            
+            context.patrol_names = new_patrols
+            save_data(context=context)
+            flash('Race configuration updated', 'success')
+            return redirect(url_for('admin_race_manage', race_id=race_id))
+
         # --- Handle judge management actions (regen/remove) from admin UI ---
         regen_judge = request.form.get('regen_judge') or json_body.get('regen_judge') or \
             request.form.get('judge_name') or json_body.get('judge_name')
@@ -1246,7 +1287,7 @@ def admin_race_members(race_id):
     owner_token = rd.get('owner_token')
     owner_qr = rd.get('owner_qr')    # filename saved by admin_set_owner_token
 
-    return render_template('admin_members.html', race_id=race_id, members=members, judges=judges_data, owner_token=owner_token, owner_qr=owner_qr, archived=archived)
+    return render_template('admin_members.html', race_id=race_id, members=members, judges=judges_data, owner_token=owner_token, owner_qr=owner_qr, archived=archived, race_context=context)
 
 
 def _delete_qr_files_from_doc(data_doc):
@@ -1903,7 +1944,7 @@ def schedule_initial_races(schedule_type: RaceScheduleType, race_context: RaceCo
         patrol_racers = [p for p in race_context.participants if p.patrol == patrol]
 
         if patrol_racers:
-            race_groups = group_racers(patrol_racers)
+            race_groups = group_racers(patrol_racers, race_context.num_lanes)
             if schedule_type == RaceScheduleType.PAIRED:
                 assign_paired_lanes(race_groups, Rounds.FIRST, race_number, race_context=race_context)
             else:
@@ -1925,7 +1966,7 @@ def schedule_semi_final_races(patrol, schedule_type: RaceScheduleType,race_conte
     if not race_context.initial_races_completed[patrol]:
         return  # Don't schedule semi's if we havent finished the races
 
-    top_racers,_ = get_top_racers(Rounds.FIRST, patrol, NUM_LANES, race_context=race_context)
+    top_racers,_ = get_top_racers(Rounds.FIRST, patrol, race_context.num_lanes, race_context=race_context)
     name_sorted_top_racers = sorted(top_racers, key=lambda racer: racer.car_name)
 
     if top_racers:
@@ -1983,14 +2024,14 @@ def get_top_racers(round: Rounds, patrol = None, racer_count=NUM_LANES, race_con
     return top_racers, overall_racer_averages
 
 
-def group_racers(racers):
+def group_racers(racers, num_lanes=NUM_LANES):
     groups = []
     num_racers = len(racers)
-    if num_racers <= NUM_LANES:
-        groups = [racers + [None] * (NUM_LANES - num_racers)]
+    if num_racers <= num_lanes:
+        groups = [racers + [None] * (num_lanes - num_racers)]
     else:
         # Get our total number of races
-        num_races = (num_racers + NUM_LANES - 1) // NUM_LANES
+        num_races = (num_racers + num_lanes - 1) // num_lanes
         # Minimum number of cars per race
         base_racers_per_race = num_racers // num_races
         remainder = num_racers % num_races
@@ -1998,15 +2039,16 @@ def group_racers(racers):
                 [base_racers_per_race] * (num_races - remainder)
         racer_idx = 0
         for d in distribution:
-            race = racers[racer_idx:racer_idx+d] + [None] * (NUM_LANES-d)
+            race = racers[racer_idx:racer_idx+d] + [None] * (num_lanes-d)
             racer_idx += d
             groups.append(race)
     return groups
 
 @require_race_context
 def assign_paired_lanes(groups, round: Rounds, race_number_start, race_context: RaceContext):
-    lanes_half_a = [i for i in range(0,int(NUM_LANES/2))]
-    lanes_half_b = [i for i in range(int(NUM_LANES/2),NUM_LANES)]
+    num_lanes = race_context.num_lanes
+    lanes_half_a = [i for i in range(0,int(num_lanes/2))]
+    lanes_half_b = [i for i in range(int(num_lanes/2),num_lanes)]
     swapped_lanes = list(reversed(lanes_half_a)) + list(reversed(lanes_half_b))
     # Create combinations and assign lanes:
     for grp in groups:
@@ -2020,11 +2062,11 @@ def assign_paired_lanes(groups, round: Rounds, race_number_start, race_context: 
             # Then reassign them in half-reverse for the second heat
             # i.e. 0,1,2,3 then 1,0,3,2 for 4 lanes
             if heat_num == 1:
-                for lane in range(NUM_LANES):
+                for lane in range(num_lanes):
                     if lane < len(grp):
                         heat.lanes[lane+1] = grp[lane] if grp[lane] else None
             else:
-                for lane in range(NUM_LANES):
+                for lane in range(num_lanes):
                     if lane < len(grp):
                         heat.lanes[swapped_lanes[lane]+1]=grp[lane] if grp[lane] else None
             race.heats.append(heat)
@@ -2033,12 +2075,13 @@ def assign_paired_lanes(groups, round: Rounds, race_number_start, race_context: 
 
 @require_race_context
 def assign_all_lanes(race_group, round: Rounds, race_number_start, race_context: RaceContext):
+    num_lanes = race_context.num_lanes
     for grp in race_group: # Iterate through race groups (only one in the finals)
         race = Race(grp[0].patrol if grp[0] else None, race_number_start) # Assign patrol and race number
         race_number_start += 1
         race.round = round
-        if len(grp) < NUM_LANES:
-            for i in range(len(grp), NUM_LANES):
+        if len(grp) < num_lanes:
+            for i in range(len(grp), num_lanes):
                 grp.append(None) # Pad with None if fewer racers than lanes
         num_cars = len(grp)
         # Assigning Lanes:
@@ -2047,7 +2090,7 @@ def assign_all_lanes(race_group, round: Rounds, race_number_start, race_context:
         # car will sit out each race.
         for heat_idx in range(num_cars):
             heat = Heat(heat_idx + 1) # Heat numbers start at 1
-            for lane in range (NUM_LANES):
+            for lane in range (num_lanes):
                 heat.lanes[lane+1] = grp[(heat_idx + lane) % num_cars] if grp[(heat_idx + lane) % num_cars] else None # Lane numbers start at 1
             race.heats.append(heat)
         race_context.races.append(race)
@@ -2070,7 +2113,7 @@ def enter_times(race_number, heat_number, race_context:  RaceContext):
         submit = request.form.get("submit", None)
         logger.info('enter_times POST start race=%s heat=%s by uid=%s', race_number, heat_number, session.get('fb_uid') or session.get('role'))
         entered_count = 0
-        for lane in range(1, NUM_LANES + 1):
+        for lane in range(1, race_context.num_lanes + 1):
             time_key = f"time_race_{race_number}_heat_{heat_number}_lane_{lane}"
             time = request.form.get(time_key, None)
             if time is not None:
@@ -2113,7 +2156,7 @@ def enter_times(race_number, heat_number, race_context:  RaceContext):
             else:
                 return redirect(url_for("schedule", patrol=race.patrol, round=race.round.value)) # Add round parameter
 
-    return render_template("enter_times.html", race=race, heat=heat, NUM_LANES=NUM_LANES, archived=race_context.archived)
+    return render_template("enter_times.html", race=race, heat=heat, NUM_LANES=race_context.num_lanes, archived=race_context.archived)
 
 @require_race_context
 def check_races_complete(patrol, round, race_context:RaceContext):
@@ -2220,7 +2263,7 @@ def schedule(race_context: RaceContext):
                            selected_round_name = selected_round_name, 
                            Rounds=Rounds, 
                            RaceScheduleType=RaceScheduleType,
-                           NUM_LANES=NUM_LANES,
+                           NUM_LANES=race_context.num_lanes,
                            initial_races_completed=race_context.initial_races_completed,
                            semi_final_races_completed=race_context.semi_final_races_completed,
                            all_semi_final_races_completed=all_semi_final_races_completed,
