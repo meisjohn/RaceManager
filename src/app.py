@@ -1463,7 +1463,7 @@ def admin_download_race():
     if not data:
         return respond_error('Race not found', 404, 'admin_ui')
 
-    return Response(json.dumps(data), mimetype='application/json', headers={ 'Content-Disposition': f'attachment; filename=race_data_{race_id}.json' })
+    return Response(json.dumps(data, indent=2, default=str), mimetype='application/json', headers={ 'Content-Disposition': f'attachment; filename=race_data_{race_id}.json' })
 
 @app.route('/admin/upload_restore', methods=['POST'])
 @require_role('ADMIN', redirect='admin_ui')
@@ -1813,10 +1813,13 @@ def add_participant(race_context: RaceContext):
     if request.method == "POST":
         first_name = request.form.get("first_name") # Get first name
         last_name = request.form.get("last_name")  # Get last name
+        car_weight_oz = request.form.get("car_weight_oz") or None # Get weight of the car
         try:
             patrol = request.form.get("patrol") # Get patrol
             if patrol in race_context.patrol_names:
                 new_participant = _add_participant_to_race(first_name, last_name, patrol, race_context=race_context)  # Add participant
+                if car_weight_oz:
+                    new_participant.car_weight_oz = float(car_weight_oz)  # Set car weight
                 save_data(context=race_context) # Save data after adding participant
                 return redirect(url_for("edit_participant", participant_id=new_participant.participant_id))  # Redirect after successful addition
             else:
