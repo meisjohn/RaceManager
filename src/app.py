@@ -1,4 +1,5 @@
 from glob import glob
+import shutil
 import logging
 import sys
 from typing import Dict, List, Any
@@ -19,6 +20,11 @@ import re
 from functools import wraps
 import threading
 import time
+
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
 
 import firebase_admin
 from firebase_admin import auth as fb_auth
@@ -621,6 +627,7 @@ class Participant:
         self.car_name = None
         self.car_number = None
         self.participant_id = uuid.uuid4().hex
+        self.car_photo = None
     def __str__(self):
         return f"P({self.car_name}): {self.patrol},{self.first_name} {self.last_name}, {self.car_weight_oz}"
     def toJSON(self):
@@ -1435,6 +1442,11 @@ def admin_delete_race():
             if not os.path.exists(archive_fn):
                 return respond_error('Archived race not found', 404, 'admin_ui')
             os.remove(archive_fn)
+        
+        # Cleanup photos for the deleted race
+        photo_dir = os.path.join(app.static_folder, 'car_photos', race_id)
+        if os.path.exists(photo_dir):
+            shutil.rmtree(photo_dir)
 
         flash(f'Race {race_id} permanently deleted', 'info')
         return redirect(url_for('admin_ui'))
@@ -1847,6 +1859,30 @@ def edit_participant(participant_id, race_context: RaceContext):
             first_name = request.form.get("first_name")
             last_name = request.form.get("last_name")
 
+            # Handle Photo Upload
+            if 'car_photo' in request.files:
+                file = request.files['car_photo']
+                if file and file.filename != '':
+                    if not Image:
+                        logger.warning("PIL not installed, cannot process image")
+                    else:
+                        try:
+                            # Create race specific directory in static/car_photos
+                            save_dir = os.path.join(app.static_folder, 'car_photos', race_context.race_id)
+                            os.makedirs(save_dir, exist_ok=True)
+                            
+                            # Process image: Convert to RGB (handle PNGs), Resize, Save as JPG
+                            filename = f"{participant.participant_id}.jpg"
+                            img = Image.open(file)
+                            img = img.convert('RGB')
+                            img.thumbnail((800, 800)) # Resize to max 800x800
+                            img.save(os.path.join(save_dir, filename), quality=85, optimize=True)
+                            
+                            participant.car_photo = filename
+                        except Exception as e:
+                            logger.exception(f"Failed to process car photo: {e}")
+                            flash("Failed to upload photo", "warning")
+
             participant.car_weight_oz = car_weight_oz
             participant.car_name = car_name
             participant.first_name = first_name
@@ -1872,6 +1908,16 @@ def delete_participant(participant_id, race_context: RaceContext):
 
     if participant_id in race_context.designs:
         del race_context.designs[participant_id]
+    
+    # Delete photo if exists
+    if participant.car_photo:
+        try:
+            photo_path = os.path.join(app.static_folder, 'car_photos', race_context.race_id, participant.car_photo)
+            if os.path.exists(photo_path):
+                os.remove(photo_path)
+        except Exception:
+            logger.exception(f"Failed to delete photo for {participant_id}")
+
     race_context.participants.remove(participant)  # Remove the participant
 
     save_data(context=race_context) # Save data after removing participant

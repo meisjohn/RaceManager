@@ -32,6 +32,11 @@
                                                 <div class="card-header has-background-info-light">
                                                     <p class="card-header-title title is-4">{{ s[0].first_name }} {{ s[0].last_name }}</p>
                                                 </div>
+                                                {% if s[0].car_photo %}
+                                                <div class="card-image">
+                                                    <figure class="image is-4by3"><img src="{{ url_for('static', filename='car_photos/' + current_race_id + '/' + s[0].car_photo) }}" alt="Car Photo" style="object-fit: cover;"></figure>
+                                                </div>
+                                                {% endif %}
                                                 <div class="card-content">
                                                     <div class="content">
                                                         <p class="subtitle is-5 mb-2">Car: <strong>{{ s[0].car_name }}</strong></p>

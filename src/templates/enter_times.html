@@ -33,6 +33,9 @@
                                         <div class="has-background-info-light p-1 has-text-weight-bold">Lane {{ lane }}</div>
                                         <div class="p-3">
                                             {% if heat.lanes.get(lane) %}
+                                                {% if heat.lanes.get(lane).car_photo %}
+                                                  <figure class="image is-4by3 m-0 p-0"><img src="{{ url_for('static', filename='car_photos/' + current_race_id + '/' + heat.lanes.get(lane).car_photo) }}" alt="Car Photo" style="object-fit: cover;"></figure>
+                                                {% endif %}
                                                 <div class="is-size-4 has-text-weight-bold">{{ heat.lanes.get(lane).car_name }}</div>
                                                 <div class="is-size-5 mb-2">{{ heat.lanes.get(lane).first_name }} {{ heat.lanes.get(lane).last_name }}</div>
                                                 <div class="field">

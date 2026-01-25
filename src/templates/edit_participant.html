@@ -10,7 +10,7 @@
                 {% set disabled='' %}
             {% endif %}
 
-            <form method="POST">
+            <form method="POST" enctype="multipart/form-data">
                 <div class="field">
                     <label class="label">First Name</label>
                     <div class="control">
@@ -50,6 +50,18 @@
                     <label class="label">Car Weight (oz)</label>
                     <div class="control">
                         <input class="input" type="number" step="0.01" name="car_weight_oz" value="{{ participant.car_weight_oz }}" autofocus required {{disabled}}>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label class="label">Car Photo</label>
+                    {% if participant.car_photo %}
+                        <figure class="image is-128x128 mb-2">
+                            <img src="{{ url_for('static', filename='car_photos/' + current_race_id + '/' + participant.car_photo) }}" alt="Car Photo">
+                        </figure>
+                    {% endif %}
+                    <div class="control">
+                        <input class="input" type="file" name="car_photo" accept="image/*;capture=camera" {{disabled}}>
                     </div>
                 </div>
 
